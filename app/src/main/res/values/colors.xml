@@ -1,5 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <!-- UniMart 2026 Master Palette -->
+    <color name="unimart_background">#18181B</color>
+    <color name="unimart_surface">#27272A</color>
+    <color name="unimart_surface_elevated">#323238</color>
+    <color name="unimart_bottom_nav">#1F1F23</color>
+
+    <color name="unimart_primary">#22C55E</color>
+    <color name="unimart_primary_pressed">#16A34A</color>
+    <color name="unimart_accent">#4ADE80</color>
+
+    <color name="unimart_text_primary">#FAFAFA</color>
+    <color name="unimart_text_secondary">#A1A1AA</color>
+    <color name="unimart_divider">#3F3F46</color>
+    <color name="unimart_stroke">#3F3F46</color>
+
+    <color name="unimart_error">#EF4444</color>
+    <color name="unimart_warning">#F59E0B</color>
+
+    <!-- UI Component Mappings -->
+    <color name="unimart_card">@color/unimart_surface</color>
+    <color name="unimart_chip_bg">@color/unimart_surface</color>
+    <color name="unimart_chip_background">@color/unimart_surface_elevated</color>
+    <color name="unimart_chip_text">@color/unimart_primary</color>
+    <color name="unimart_text_on_primary">#FFFFFF</color>
+    <color name="unimart_glass_white">#1AFFFFFF</color>
+
+    <!-- Standard Colors -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="transparent">#00000000</color>
 </resources>

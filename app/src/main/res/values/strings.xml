@@ -1,3 +1,108 @@
 <resources>
     <string name="app_name">UniMart</string>
+    <string name="app_tagline">Buy • Sell • Exchange\nWithin Your Campus</string>
+    <string name="welcome_back">Welcome Back</string>
+    <string name="login_subtitle">Buy • Sell • Exchange\nSecurely Within Your Campus</string>
+    <string name="email_address">Email Address</string>
+    <string name="password">Password</string>
+    <string name="login">Login</string>
+    <string name="logging_in">Logging in&#8230;</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="dont_have_account">Don\'t have an account? </string>
+    <string name="create_account">Create Account</string>
+    <string name="data_safe">🔒 Your data is safe with UniMart</string>
+    <string name="security_icon">Security Icon</string>
+    <string name="campus_background">Campus Background</string>
+
+    <!-- Signup Screen -->
+    <string name="signup_subtitle">Join your campus marketplace\nBuy • Sell • Exchange securely</string>
+    <string name="full_name">Full Name</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="whatsapp_number">WhatsApp Number</string>
+    <string name="already_have_account">Already have an account? </string>
+    <string name="signup_data_safe">Your information is securely protected.</string>
+    <string name="creating">Creating&#8230;</string>
+
+    <!-- Validation -->
+    <string name="err_full_name">Enter your full name</string>
+    <string name="err_email">Enter your email</string>
+    <string name="err_password">Enter password</string>
+    <string name="err_password_length">Password must be at least 6 characters</string>
+    <string name="err_confirm_password">Confirm your password</string>
+    <string name="err_password_mismatch">Passwords do not match</string>
+    <string name="err_whatsapp">Enter WhatsApp number</string>
+
+    <!-- Main Activity -->
+    <string name="welcome_to_unimart">Welcome to UniMart</string>
+    <string name="auth_successful">Authentication Successful</string>
+    <!-- Home Fragment -->
+    <string name="search_hint">Search books, phones, furniture&#8230;</string>
+    <string name="categories">Categories</string>
+    <string name="latest_listings">Latest Listings</string>
+    <string name="latest_listings_subtitle">Recently posted products</string>
+    <string name="no_products_yet">No products available yet</string>
+    <string name="no_products_subtitle">Be the first student to post an item.</string>
+    <string name="sell">Sell</string>
+    <string name="profile_picture">Profile Picture</string>
+    <string name="empty_state_icon">Empty state icon</string>
+
+    <!-- Sell Product Screen -->
+    <string name="add_photo">Add Photo</string>
+    <string name="upload_product_images">Upload Product Images</string>
+    <string name="max_images">Maximum 5 images</string>
+    <string name="product_title">Product Title</string>
+    <string name="description">Description</string>
+    <string name="category">Category</string>
+    <string name="condition">Condition</string>
+    <string name="listing_type">Listing Type</string>
+    <string name="exchange">Exchange</string>
+    <string name="price">Price</string>
+    <string name="looking_for">Looking For</string>
+    <string name="exchange_example">Example: Mechanical Keyboard</string>
+    <string name="publish_listing">Publish Listing</string>
+    <string name="sell_product">Sell Product</string>
+    <string name="remove_image">Remove image</string>
+    <string name="selected_image">Selected Image</string>
+
+    <!-- Product Details -->
+    <string name="product_details">Product Details</string>
+    <string name="description_label">Description</string>
+    <string name="looking_for_label">Looking For</string>
+    <string name="contact_seller">Contact Seller</string>
+    <string name="request_pending">Request Pending</string>
+    <string name="request_accepted">WhatsApp Seller</string>
+    <string name="request_rejected">Request Rejected</string>
+    <string name="contact_request_title">Request Contact</string>
+    <string name="contact_request_hint">Enter a brief message for the seller...</string>
+    <string name="send_request">Send Request</string>
+    <string name="request_sent_success">Request sent successfully!</string>
+    <string name="already_requested">You have already requested contact for this product.</string>
+
+    <!-- Profile Module -->
+    <string name="selling">Selling</string>
+    <string name="sold">Sold</string>
+    <string name="wishlist">Wishlist</string>
+    <string name="my_listings">My Listings</string>
+    <string name="logout">Logout</string>
+    <string name="home">Home</string>
+    <string name="profile">Profile</string>
+    <string name="zero">0</string>
+    <string name="campus_seller">Campus Seller</string>
+    <string name="member_since">Member since 2026</string>
+
+    <!-- Profile Photo Bottom Sheet -->
+    <string name="profile_photo">Profile Photo</string>
+    <string name="change_photo">Change Photo</string>
+    <string name="remove_photo_label">Remove Photo</string>
+
+    <!-- Product Requests UI -->
+    <string name="request_pending_badge">🟡 %1$d Pending</string>
+    <string name="all_requests_handled">✓ All Handled</string>
+    <string name="contact_requests_subtitle">View and manage contact requests for your listed products.</string>
+    <string name="no_requests_title">No Contact Requests Yet</string>
+    <string name="no_requests_subtitle">When buyers request your products, they will appear here.</string>
+    <string name="product_requests_title">Requests for: %1$s</string>
+    <string name="recent_requests">Recent Requests</string>
+    <string name="no_product_requests_title">No Requests Yet</string>
+    <string name="no_product_requests_subtitle">Nobody has requested this product yet.</string>
 </resources>

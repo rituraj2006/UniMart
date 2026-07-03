@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/unimart_background">
+
+    <!-- Fixed Toolbar below Status Bar -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/unimart_background"
+        app:elevation="0dp"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="?attr/homeAsUpIndicator"
+            app:title="@string/product_details"
+            app:titleCentered="true"
+            app:titleTextColor="@color/white"
+            app:navigationIconTint="@color/white">
+
+            <ImageView
+                android:id="@+id/ivWishlist"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_gravity="end"
+                android:layout_marginEnd="16dp"
+                android:src="@drawable/ic_wishlist_outline"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="Wishlist" />
+
+        </com.google.android.material.appbar.MaterialToolbar>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/nestedScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        android:clipToPadding="false"
+        app:layout_constraintBottom_toTopOf="@id/bottomActionLayout"
+        app:layout_constraintTop_toBottomOf="@id/appBarLayout">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="32dp">
+
+            <!-- Image ViewPager Section -->
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/viewPagerImages"
+                android:layout_width="match_parent"
+                android:layout_height="320dp"
+                android:background="@color/unimart_background" />
+
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/tabLayoutIndicators"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="-24dp"
+                android:background="@android:color/transparent"
+                app:tabBackground="@drawable/tab_selector"
+                app:tabGravity="center"
+                app:tabIndicatorHeight="0dp"
+                app:tabMaxWidth="12dp"
+                app:tabRippleColor="@null" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="20dp"
+                android:paddingTop="24dp">
+
+                <TextView
+                    android:id="@+id/tvPrice"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/unimart_primary"
+                    android:textSize="32sp"
+                    android:textStyle="bold"
+                    tools:text="₹45000" />
+
+                <TextView
+                    android:id="@+id/tvTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/white"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    tools:text="iPhone 13 Pro - Graphite" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    app:chipSpacingHorizontal="8dp">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipCategory"
+                        style="@style/Widget.Material3.Chip.Assist"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:chipBackgroundColor="@color/unimart_chip_background"
+                        app:chipCornerRadius="8dp"
+                        app:chipStrokeWidth="0dp"
+                        android:textColor="@color/unimart_chip_text"
+                        tools:text="Electronics" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipCondition"
+                        style="@style/Widget.Material3.Chip.Assist"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:chipBackgroundColor="@color/unimart_chip_background"
+                        app:chipCornerRadius="8dp"
+                        app:chipStrokeWidth="0dp"
+                        android:textColor="@color/unimart_chip_text"
+                        tools:text="Like New" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipListingType"
+                        style="@style/Widget.Material3.Chip.Assist"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:chipBackgroundColor="@color/unimart_chip_background"
+                        app:chipCornerRadius="8dp"
+                        app:chipStrokeWidth="0dp"
+                        android:textColor="@color/unimart_chip_text"
+                        tools:text="Sell" />
+
+                </com.google.android.material.chip.ChipGroup>
+
+                <com.google.android.material.divider.MaterialDivider
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    app:dividerColor="@color/unimart_divider" />
+
+                <!-- Description Section -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="@string/description_label"
+                    android:textColor="@color/white"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:lineSpacingExtra="6dp"
+                    android:textColor="@color/unimart_text_primary"
+                    android:textSize="15sp"
+                    tools:text="Almost new iPhone 13 Pro with 256GB storage. Used for only 3 months. Battery health is 99%." />
+
+                <!-- Looking For Section -->
+                <LinearLayout
+                    android:id="@+id/layoutLookingFor"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="28dp"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/looking_for_label"
+                        android:textColor="@color/white"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvLookingForDescription"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:textColor="@color/unimart_text_secondary"
+                        android:textSize="15sp"
+                        tools:text="I am looking for a MacBook Air M1 in exchange for this iPhone." />
+
+                </LinearLayout>
+
+                <com.google.android.material.divider.MaterialDivider
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="28dp"
+                    app:dividerColor="@color/unimart_divider" />
+
+                <!-- Seller Info -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="28dp"
+                    app:cardBackgroundColor="@color/unimart_surface"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp"
+                    app:strokeWidth="0dp">
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="20dp">
+
+                        <com.google.android.material.imageview.ShapeableImageView
+                            android:id="@+id/ivSellerProfile"
+                            android:layout_width="60dp"
+                            android:layout_height="60dp"
+                            android:padding="2dp"
+                            android:scaleType="centerCrop"
+                            android:src="@drawable/ic_profile_placeholder"
+                            app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
+                            app:strokeColor="@color/unimart_primary"
+                            app:strokeWidth="2dp" />
+
+                        <TextView
+                            android:id="@+id/tvSellerName"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:textColor="@color/white"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            app:layout_constraintBottom_toTopOf="@id/tvSellerSubtitle"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toEndOf="@id/ivSellerProfile"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintVertical_chainStyle="packed"
+                            tools:text="Ritu Raj" />
+
+                        <TextView
+                            android:id="@+id/tvSellerSubtitle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:text="@string/campus_seller"
+                            android:textColor="@color/unimart_text_secondary"
+                            android:textSize="13sp"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toStartOf="@id/tvSellerName"
+                            app:layout_constraintTop_toBottomOf="@id/tvSellerName" />
+
+                        <TextView
+                            android:id="@+id/tvMemberSince"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/member_since"
+                            android:textColor="@color/unimart_text_secondary"
+                            android:textSize="12sp"
+                            app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toStartOf="@id/tvSellerName"
+                            app:layout_constraintTop_toBottomOf="@id/tvSellerSubtitle" />
+
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Bottom Action Layout -->
+    <LinearLayout
+        android:id="@+id/bottomActionLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/unimart_background"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnContactSeller"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_margin="20dp"
+            android:text="@string/contact_seller"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:backgroundTint="@color/unimart_primary"
+            app:cornerRadius="16dp" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

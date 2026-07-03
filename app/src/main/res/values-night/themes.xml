@@ -1,7 +1,29 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+    <!-- UniMart Dark Theme (Default) -->
     <style name="Base.Theme.UniMart" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <!-- Palette -->
+        <item name="colorPrimary">@color/unimart_primary</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="android:windowBackground">@color/unimart_background</item>
+        <item name="colorSurface">@color/unimart_surface</item>
+        <item name="colorOnSurface">@color/unimart_text_primary</item>
+        <item name="colorSurfaceVariant">@color/unimart_surface_elevated</item>
+        <item name="colorOnSurfaceVariant">@color/unimart_text_secondary</item>
+        <item name="colorError">@color/unimart_error</item>
+
+        <!-- Global Component Styles -->
+        <item name="materialCardViewStyle">@style/Widget.UniMart.Card</item>
+        <item name="materialButtonStyle">@style/Widget.UniMart.Button</item>
+        <item name="textInputStyle">@style/Widget.UniMart.TextInputLayout</item>
+        <item name="chipStyle">@style/Widget.UniMart.Chip</item>
+        <item name="bottomNavigationStyle">@style/Widget.UniMart.BottomNav</item>
+        <item name="extendedFloatingActionButtonStyle">@style/Widget.UniMart.FAB</item>
+        <item name="toolbarStyle">@style/Widget.UniMart.Toolbar</item>
+
+        <!-- System Bars -->
+        <item name="android:statusBarColor">@color/unimart_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">@color/unimart_bottom_nav</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
     </style>
 </resources>
