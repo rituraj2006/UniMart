@@ -50,6 +50,15 @@ class HomeViewModel : ViewModel() {
     }
 
     /**
+     * Resets all search and category filters.
+     */
+    fun resetFilters() {
+        currentSearchQuery = ""
+        selectedCategory = null
+        applyFilters()
+    }
+
+    /**
      * Combines category and search filters and updates the LiveData.
      */
     private fun applyFilters() {

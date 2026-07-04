@@ -43,6 +43,7 @@ class HomeFragment : Fragment() {
     private val productList = mutableListOf<Product>()
     private var wishlistedIds = setOf<String>()
     private lateinit var productAdapter: ProductAdapter
+    private lateinit var categoryAdapter: CategoryAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -68,11 +69,32 @@ class HomeFragment : Fragment() {
         setupRecyclerView()
         setupClickListeners()
         setupSearch()
+        setupSwipeRefresh()
         loadWishlist()
         loadProducts()
         loadCurrentUserProfile()
         
         observeViewModel()
+    }
+
+    private fun setupSwipeRefresh() {
+        binding.swipeRefreshLayout.setColorSchemeResources(R.color.unimart_primary)
+        binding.swipeRefreshLayout.setProgressBackgroundColorSchemeResource(R.color.unimart_surface_elevated)
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            // 1. Reset search and category in ViewModel
+            viewModel.resetFilters()
+
+            // 2. Clear UI Search Field (will trigger TextWatcher, but resetFilters handles it)
+            binding.etSearch.text?.clear()
+
+            // 3. Reset Category UI
+            if (::categoryAdapter.isInitialized) {
+                categoryAdapter.resetSelection()
+            }
+
+            // 4. Reload from Firestore
+            loadProducts()
+        }
     }
 
     override fun onResume() {
@@ -91,8 +113,13 @@ class HomeFragment : Fragment() {
         }
 
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            binding.loadingIndicator.visibility = if (isLoading) View.VISIBLE else View.GONE
-            binding.rvProducts.visibility = if (isLoading) View.GONE else View.VISIBLE
+            binding.loadingIndicator.visibility = if (isLoading && !binding.swipeRefreshLayout.isRefreshing) View.VISIBLE else View.GONE
+            binding.rvProducts.visibility = if (isLoading && !binding.swipeRefreshLayout.isRefreshing) View.GONE else View.VISIBLE
+            
+            if (!isLoading) {
+                binding.swipeRefreshLayout.isRefreshing = false
+            }
+
             // Optionally hide empty state while loading
             if (isLoading) binding.llEmptyState.visibility = View.GONE
         }
@@ -132,10 +159,11 @@ class HomeFragment : Fragment() {
             Category(Categories.ACCESSORIES, R.drawable.ic_search),
             Category(Categories.OTHERS, R.drawable.ic_search)
         )
-        binding.rvCategories.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
-        binding.rvCategories.adapter = CategoryAdapter(categoryList) { category ->
+        categoryAdapter = CategoryAdapter(categoryList) { category ->
             viewModel.selectCategory(category.name)
         }
+        binding.rvCategories.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+        binding.rvCategories.adapter = categoryAdapter
     }
 
     private fun setupRecyclerView() {

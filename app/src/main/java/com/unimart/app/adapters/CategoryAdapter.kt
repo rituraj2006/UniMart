@@ -14,6 +14,14 @@ class CategoryAdapter(
 
     private var selectedPosition = -1
 
+    fun resetSelection() {
+        val previous = selectedPosition
+        selectedPosition = -1
+        if (previous != -1) {
+            notifyItemChanged(previous)
+        }
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CategoryViewHolder {
         val binding = ItemCategoryBinding.inflate(
             LayoutInflater.from(parent.context),
