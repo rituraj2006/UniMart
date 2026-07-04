@@ -24,13 +24,13 @@
     <string name="creating">Creating&#8230;</string>
 
     <!-- Validation -->
-    <string name="err_full_name">Enter your full name</string>
-    <string name="err_email">Enter your email</string>
-    <string name="err_password">Enter password</string>
-    <string name="err_password_length">Password must be at least 6 characters</string>
-    <string name="err_confirm_password">Confirm your password</string>
-    <string name="err_password_mismatch">Passwords do not match</string>
-    <string name="err_whatsapp">Enter WhatsApp number</string>
+    <string name="err_full_name">Please enter your full name.</string>
+    <string name="err_email">Please enter a valid email address.</string>
+    <string name="err_password">Please enter password.</string>
+    <string name="err_password_length">Password must contain at least 6 characters.</string>
+    <string name="err_confirm_password">Please confirm your password.</string>
+    <string name="err_password_mismatch">Passwords do not match.</string>
+    <string name="err_whatsapp">Please enter a valid 10-digit WhatsApp number.</string>
 
     <!-- Main Activity -->
     <string name="welcome_to_unimart">Welcome to UniMart</string>

@@ -1,14 +1,17 @@
 package com.unimart.app.activities
 
 import android.os.Bundle
+import android.util.Patterns
+import android.view.View
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.textfield.TextInputEditText
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import com.unimart.app.R
+import com.unimart.app.viewmodels.AuthViewModel
 
 class SignupActivity : AppCompatActivity() {
 
@@ -20,21 +23,18 @@ class SignupActivity : AppCompatActivity() {
 
     private lateinit var btnSignup: MaterialButton
     private lateinit var tvLogin: TextView
+    private lateinit var loadingIndicator: CircularProgressIndicator
 
-    private lateinit var auth: FirebaseAuth
-    private lateinit var firestore: FirebaseFirestore
+    private val viewModel: AuthViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_signup)
 
         initViews()
-
-        auth = FirebaseAuth.getInstance()
-        firestore = FirebaseFirestore.getInstance()
+        observeViewModel()
 
         tvLogin.setOnClickListener {
-            // Just finish to go back to existing LoginActivity
             finish()
         }
 
@@ -52,126 +52,78 @@ class SignupActivity : AppCompatActivity() {
 
         btnSignup = findViewById(R.id.btnSignup)
         tvLogin = findViewById(R.id.tvLogin)
+        loadingIndicator = findViewById(R.id.loadingIndicator)
+    }
+
+    private fun observeViewModel() {
+        viewModel.isLoading.observe(this) { isLoading ->
+            btnSignup.isEnabled = !isLoading
+            loadingIndicator.visibility = if (isLoading) View.VISIBLE else View.GONE
+            btnSignup.text = if (isLoading) getString(R.string.creating) else getString(R.string.create_account)
+        }
+
+        viewModel.error.observe(this) { error ->
+            error?.let {
+                Toast.makeText(this, it, Toast.LENGTH_LONG).show()
+                viewModel.clearError()
+            }
+        }
+
+        viewModel.signupSuccess.observe(this) { success ->
+            if (success) {
+                showVerificationDialog(etEmail.text.toString().trim())
+            }
+        }
+    }
+
+    private fun showVerificationDialog(email: String) {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("📧 Verify Your Email")
+            .setMessage("We've sent a verification email to:\n\n$email\n\nPlease verify your email before logging in to UniMart.\n\nIf you don't receive the email within 1–2 minutes:\n\n• Check your Inbox\n• Check your Spam/Junk folder\n• If you still don't receive it, you can use \"Resend Verification Email\" from the Login screen.\n\nAfter verifying your email, return to the Login screen and sign in.")
+            .setPositiveButton("Go to Login") { _, _ ->
+                finish()
+            }
+            .setCancelable(false)
+            .show()
     }
 
     private fun registerUser() {
-
         val fullName = etFullName.text.toString().trim()
         val email = etEmail.text.toString().trim()
         val password = etPassword.text.toString().trim()
         val confirmPassword = etConfirmPassword.text.toString().trim()
         val whatsapp = etWhatsApp.text.toString().trim()
 
-        when {
-            fullName.isEmpty() -> {
-                etFullName.error = getString(R.string.err_full_name)
-                etFullName.requestFocus()
-                return
-            }
-
-            email.isEmpty() -> {
-                etEmail.error = getString(R.string.err_email)
-                etEmail.requestFocus()
-                return
-            }
-
-            password.isEmpty() -> {
-                etPassword.error = getString(R.string.err_password)
-                etPassword.requestFocus()
-                return
-            }
-
-            password.length < 6 -> {
-                etPassword.error = getString(R.string.err_password_length)
-                etPassword.requestFocus()
-                return
-            }
-
-            confirmPassword.isEmpty() -> {
-                etConfirmPassword.error = getString(R.string.err_confirm_password)
-                etConfirmPassword.requestFocus()
-                return
-            }
-
-            password != confirmPassword -> {
-                etConfirmPassword.error = getString(R.string.err_password_mismatch)
-                etConfirmPassword.requestFocus()
-                return
-            }
-
-            whatsapp.isEmpty() -> {
-                etWhatsApp.error = getString(R.string.err_whatsapp)
-                etWhatsApp.requestFocus()
-                return
-            }
+        if (fullName.isEmpty()) {
+            etFullName.error = getString(R.string.err_full_name)
+            etFullName.requestFocus()
+            return
         }
 
-        btnSignup.isEnabled = false
-        btnSignup.text = getString(R.string.creating)
+        if (email.isEmpty() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            etEmail.error = getString(R.string.err_email)
+            etEmail.requestFocus()
+            return
+        }
 
-        auth.createUserWithEmailAndPassword(email, password)
-            .addOnCompleteListener(this) { task ->
+        if (password.length < 6) {
+            etPassword.error = getString(R.string.err_password_length)
+            etPassword.requestFocus()
+            return
+        }
 
-                if (task.isSuccessful) {
+        if (password != confirmPassword) {
+            etConfirmPassword.error = getString(R.string.err_password_mismatch)
+            etConfirmPassword.requestFocus()
+            return
+        }
 
-                    val firebaseUser = auth.currentUser
+        if (whatsapp.length != 10) {
+            etWhatsApp.error = getString(R.string.err_whatsapp)
+            etWhatsApp.requestFocus()
+            return
+        }
 
-                    if (firebaseUser != null) {
-
-                        val userData = hashMapOf(
-                            "uid" to firebaseUser.uid,
-                            "name" to fullName,
-                            "email" to email,
-                            "whatsappNumber" to whatsapp,
-                            "profileImage" to "",
-                            "joinedDate" to System.currentTimeMillis()
-                        )
-
-                        firestore.collection("Users")
-                            .document(firebaseUser.uid)
-                            .set(userData)
-                            .addOnSuccessListener {
-
-                                btnSignup.isEnabled = true
-                                btnSignup.text = getString(R.string.create_account)
-
-                                Toast.makeText(
-                                    this,
-                                    "Account created successfully!",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-
-                                // Sign out user after registration to force manual login
-                                auth.signOut()
-
-                                // Finish this activity to go back to LoginActivity
-                                finish()
-                            }
-                            .addOnFailureListener {
-
-                                btnSignup.isEnabled = true
-                                btnSignup.text = getString(R.string.create_account)
-
-                                Toast.makeText(
-                                    this,
-                                    "Failed to save user profile.",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-
-                    }
-
-                } else {
-
-                    btnSignup.isEnabled = true
-                    btnSignup.text = getString(R.string.create_account)
-
-                    Toast.makeText(
-                        this,
-                        task.exception?.localizedMessage ?: "Signup failed",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
+        viewModel.signUp(fullName, email, whatsapp, password)
     }
 }
