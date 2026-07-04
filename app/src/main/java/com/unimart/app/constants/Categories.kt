@@ -10,4 +10,5 @@ object Categories {
     const val HOSTEL_ESSENTIALS = "Hostel Essentials"
     const val NOTES = "Notes"
     const val ACCESSORIES = "Accessories"
+    const val OTHERS = "Others"
 }

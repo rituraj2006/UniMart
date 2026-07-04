@@ -139,7 +139,7 @@ class SellProductActivity : AppCompatActivity() {
     private fun setupDropdowns() {
         val categories = arrayOf(
             "Books", "Electronics", "Furniture", "Cycles",
-            "Phones", "Hostel Essentials", "Notes", "Accessories"
+            "Phones", "Hostel Essentials", "Notes", "Accessories", "Others"
         )
         val categoryAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, categories)
         actCategory.setAdapter(categoryAdapter)

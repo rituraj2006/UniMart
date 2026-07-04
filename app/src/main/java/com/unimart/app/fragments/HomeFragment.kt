@@ -129,7 +129,8 @@ class HomeFragment : Fragment() {
             Category(Categories.PHONES, R.drawable.ic_search),
             Category(Categories.HOSTEL_ESSENTIALS, R.drawable.ic_search),
             Category(Categories.NOTES, R.drawable.ic_search),
-            Category(Categories.ACCESSORIES, R.drawable.ic_search)
+            Category(Categories.ACCESSORIES, R.drawable.ic_search),
+            Category(Categories.OTHERS, R.drawable.ic_search)
         )
         binding.rvCategories.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         binding.rvCategories.adapter = CategoryAdapter(categoryList) { category ->
