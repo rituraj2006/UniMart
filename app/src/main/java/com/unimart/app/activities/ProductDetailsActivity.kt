@@ -17,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
@@ -41,6 +42,7 @@ import java.util.Locale
 class ProductDetailsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityProductDetailsBinding
+    private lateinit var viewModel: com.unimart.app.viewmodels.ProductDetailsViewModel
     private val productRepository = ProductRepository()
     private val contactRepository = ContactRepository()
     private val wishlistRepository = WishlistRepository()
@@ -54,6 +56,10 @@ class ProductDetailsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityProductDetailsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        viewModel = ViewModelProvider(this)[com.unimart.app.viewmodels.ProductDetailsViewModel::class.java]
+
+        observeViewModel()
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -75,6 +81,17 @@ class ProductDetailsActivity : AppCompatActivity() {
         binding.ivWishlist.setOnClickListener {
             animateHeart()
             toggleWishlist(productId)
+        }
+    }
+
+    private fun observeViewModel() {
+        viewModel.isLoading.observe(this) { isLoading ->
+            binding.loadingIndicator.visibility = if (isLoading) View.VISIBLE else View.GONE
+            binding.nestedScrollView.visibility = if (isLoading) View.GONE else View.VISIBLE
+            binding.bottomActionLayout.visibility = if (isLoading) View.GONE else {
+                // Keep hidden if user is seller
+                if (FirebaseAuth.getInstance().currentUser?.uid == currentProduct?.sellerId) View.GONE else View.VISIBLE
+            }
         }
     }
 
@@ -132,8 +149,10 @@ class ProductDetailsActivity : AppCompatActivity() {
     }
 
     private fun loadProductDetails(productId: String) {
+        viewModel.setLoading(true)
         productRepository.getProductById(productId,
             onSuccess = { product ->
+                viewModel.setLoading(false)
                 if (isFinishing) return@getProductById
                 currentProduct = product
                 populateUI(product)
@@ -141,6 +160,7 @@ class ProductDetailsActivity : AppCompatActivity() {
                 invalidateOptionsMenu()
             },
             onFailure = {
+                viewModel.setLoading(false)
                 if (isFinishing) return@getProductById
                 Toast.makeText(this, "Failed to load product", Toast.LENGTH_SHORT).show()
             },

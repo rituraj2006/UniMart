@@ -13,6 +13,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
@@ -28,6 +29,7 @@ import com.unimart.app.network.CloudinaryRepository
 import com.unimart.app.repositories.ContactRepository
 import com.unimart.app.repositories.ProductRepository
 import com.unimart.app.repositories.WishlistRepository
+import com.unimart.app.viewmodels.ProfileViewModel
 import kotlinx.coroutines.launch
 
 class ProfileFragment : Fragment() {
@@ -35,6 +37,7 @@ class ProfileFragment : Fragment() {
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
 
+    private lateinit var viewModel: ProfileViewModel
     private val repository = ProductRepository()
     private val contactRepository = ContactRepository()
     private val wishlistRepository = WishlistRepository()
@@ -62,6 +65,8 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        viewModel = ViewModelProvider(this)[ProfileViewModel::class.java]
+
         cloudinaryRepository = CloudinaryRepository(requireContext())
 
         // Handle Window Insets
@@ -71,6 +76,7 @@ class ProfileFragment : Fragment() {
             insets
         }
 
+        observeViewModel()
         setupRecyclerView()
         loadUserProfile()
         loadStatistics()
@@ -91,6 +97,13 @@ class ProfileFragment : Fragment() {
 
         binding.btnLogout.setOnClickListener {
             logoutUser()
+        }
+    }
+
+    private fun observeViewModel() {
+        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            binding.loadingIndicator.visibility = if (isLoading) View.VISIBLE else View.GONE
+            binding.nestedScrollView.visibility = if (isLoading) View.GONE else View.VISIBLE
         }
     }
 
@@ -164,8 +177,10 @@ class ProfileFragment : Fragment() {
     }
 
     private fun loadUserProfile() {
+        viewModel.setLoading(true)
         repository.getCurrentUser(
             onSuccess = { user ->
+                viewModel.setLoading(false)
                 if (_binding == null) return@getCurrentUser
                 binding.tvUserName.text = user.name
                 binding.tvUserEmail.text = user.email
@@ -179,6 +194,7 @@ class ProfileFragment : Fragment() {
                     .into(binding.ivProfileImage)
             },
             onFailure = {
+                viewModel.setLoading(false)
                 context?.let {
                     Toast.makeText(it, "Failed to load profile", Toast.LENGTH_SHORT).show()
                 }

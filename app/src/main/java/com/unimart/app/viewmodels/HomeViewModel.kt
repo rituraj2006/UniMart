@@ -11,8 +11,18 @@ class HomeViewModel : ViewModel() {
     private val _filteredProducts = MutableLiveData<List<Product>>()
     val filteredProducts: LiveData<List<Product>> = _filteredProducts
 
+    private val _isLoading = MutableLiveData<Boolean>()
+    val isLoading: LiveData<Boolean> = _isLoading
+
     private var currentSearchQuery = ""
     private var selectedCategory: String? = null
+
+    /**
+     * Updates loading state
+     */
+    fun setLoading(isLoading: Boolean) {
+        _isLoading.value = isLoading
+    }
 
     /**
      * Initializes the master list. Called once when data is loaded from Repository.

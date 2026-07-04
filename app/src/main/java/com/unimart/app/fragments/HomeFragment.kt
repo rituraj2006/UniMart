@@ -89,6 +89,13 @@ class HomeFragment : Fragment() {
                 updateEmptyState(filteredList.isEmpty())
             }
         }
+
+        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            binding.loadingIndicator.visibility = if (isLoading) View.VISIBLE else View.GONE
+            binding.rvProducts.visibility = if (isLoading) View.GONE else View.VISIBLE
+            // Optionally hide empty state while loading
+            if (isLoading) binding.llEmptyState.visibility = View.GONE
+        }
     }
 
     private fun setupSearch() {
@@ -155,11 +162,13 @@ class HomeFragment : Fragment() {
     }
 
     private fun loadProducts() {
+        viewModel.setLoading(true)
         val db = FirebaseFirestore.getInstance()
         db.collection("Products")
             .orderBy("createdAt", Query.Direction.DESCENDING)
             .get()
             .addOnSuccessListener { querySnapshot ->
+                viewModel.setLoading(false)
                 if (_binding == null) return@addOnSuccessListener
                 
                 val newProducts = mutableListOf<Product>()
@@ -181,6 +190,7 @@ class HomeFragment : Fragment() {
                 updateEmptyState(productList.isEmpty())
             }
             .addOnFailureListener { e ->
+                viewModel.setLoading(false)
                 if (_binding == null) return@addOnFailureListener
                 context?.let { Toast.makeText(it, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show() }
             }

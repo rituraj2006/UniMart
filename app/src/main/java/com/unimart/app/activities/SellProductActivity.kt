@@ -11,6 +11,7 @@ import android.widget.Toast
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -18,6 +19,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.google.firebase.auth.FirebaseAuth
@@ -29,6 +31,7 @@ import com.unimart.app.constants.ProductStatus
 import com.unimart.app.models.Product
 import com.unimart.app.network.CloudinaryRepository
 import com.unimart.app.repositories.ProductRepository
+import com.unimart.app.viewmodels.SellProductViewModel
 import kotlinx.coroutines.launch
 
 class SellProductActivity : AppCompatActivity() {
@@ -38,7 +41,7 @@ class SellProductActivity : AppCompatActivity() {
     private lateinit var imagesAdapter: SelectedImagesAdapter
     private lateinit var cloudinaryRepository: CloudinaryRepository
     private val productRepository = ProductRepository()
-    private var loadingDialog: AlertDialog? = null
+    private lateinit var viewModel: SellProductViewModel
 
     // UI Elements
     private lateinit var toolbar: MaterialToolbar
@@ -54,6 +57,7 @@ class SellProductActivity : AppCompatActivity() {
     private lateinit var tilLookingFor: TextInputLayout
     private lateinit var etLookingFor: TextInputEditText
     private lateinit var btnPublish: MaterialButton
+    private lateinit var loadingIndicator: CircularProgressIndicator
 
     private var isEditMode = false
     private var productId: String? = null
@@ -74,10 +78,13 @@ class SellProductActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sell_product)
 
+        viewModel = ViewModelProvider(this)[SellProductViewModel::class.java]
+
         isEditMode = intent.getBooleanExtra("IS_EDIT_MODE", false)
         productId = intent.getStringExtra("PRODUCT_ID")
 
         initViews()
+        observeViewModel()
         cloudinaryRepository = CloudinaryRepository(this)
         
         setupToolbar()
@@ -110,6 +117,17 @@ class SellProductActivity : AppCompatActivity() {
         tilLookingFor = findViewById(R.id.tilLookingFor)
         etLookingFor = findViewById(R.id.etLookingFor)
         btnPublish = findViewById(R.id.btnPublish)
+        loadingIndicator = findViewById(R.id.loadingIndicator)
+    }
+
+    private fun observeViewModel() {
+        viewModel.isLoading.observe(this) { isLoading ->
+            loadingIndicator.visibility = if (isLoading) View.VISIBLE else View.GONE
+            btnPublish.isEnabled = !isLoading
+            btnPublish.text = if (isLoading) "Uploading..." else {
+                if (isEditMode) "Update Listing" else "Publish Listing"
+            }
+        }
     }
 
     private fun setupToolbar() {
@@ -165,15 +183,15 @@ class SellProductActivity : AppCompatActivity() {
     }
 
     private fun loadProductData(productId: String) {
-        showLoading("Loading data...")
+        viewModel.setLoading(true)
         productRepository.getProductById(productId,
             onSuccess = { product ->
                 currentProduct = product
-                hideLoading()
+                viewModel.setLoading(false)
                 populateFields(product)
             },
             onFailure = {
-                hideLoading()
+                viewModel.setLoading(false)
                 showToast("Failed to load product data")
                 finish()
             }
@@ -251,9 +269,7 @@ class SellProductActivity : AppCompatActivity() {
         priceText: String,
         lookingFor: String
     ) {
-        val message = if (isEditMode) "Updating listing..." else "Publishing listing..."
-        showLoading(message)
-        btnPublish.isEnabled = false
+        viewModel.setLoading(true)
 
         lifecycleScope.launch {
             val finalImageUrls = mutableListOf<String>()
@@ -320,7 +336,7 @@ class SellProductActivity : AppCompatActivity() {
         if (isEditMode && productId != null) {
             productRepository.updateProduct(product,
                 onSuccess = {
-                    hideLoading()
+                    viewModel.setLoading(false)
                     showToast("Listing Updated Successfully")
                     finish()
                 },
@@ -334,7 +350,7 @@ class SellProductActivity : AppCompatActivity() {
                 .addOnSuccessListener { documentReference ->
                     documentReference.update("productId", documentReference.id)
                         .addOnCompleteListener {
-                            hideLoading()
+                            viewModel.setLoading(false)
                             showToast("Listing Published Successfully")
                             finish()
                         }
@@ -345,24 +361,8 @@ class SellProductActivity : AppCompatActivity() {
         }
     }
 
-    private fun showLoading(message: String) {
-        val builder = AlertDialog.Builder(this)
-        builder.setTitle(message)
-        val progressBar = ProgressBar(this)
-        progressBar.setPadding(40, 40, 40, 40)
-        builder.setView(progressBar)
-        builder.setCancelable(false)
-        loadingDialog = builder.create()
-        loadingDialog?.show()
-    }
-
-    private fun hideLoading() {
-        loadingDialog?.dismiss()
-    }
-
     private fun onFailure(message: String) {
-        hideLoading()
-        btnPublish.isEnabled = true
+        viewModel.setLoading(false)
         showToast(message)
     }
 

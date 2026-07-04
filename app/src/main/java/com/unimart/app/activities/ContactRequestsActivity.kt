@@ -9,6 +9,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.core.view.updatePadding
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.auth.FirebaseAuth
 import com.unimart.app.adapters.ProductRequestsOverviewAdapter
@@ -16,10 +18,12 @@ import com.unimart.app.databinding.ActivityContactRequestsBinding
 import com.unimart.app.models.ProductWithRequestCount
 import com.unimart.app.repositories.ContactRepository
 import com.unimart.app.repositories.ProductRepository
+import com.unimart.app.viewmodels.ContactRequestsViewModel
 
 class ContactRequestsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityContactRequestsBinding
+    private lateinit var viewModel: ContactRequestsViewModel
     private val contactRepository = ContactRepository()
     private val productRepository = ProductRepository()
     private val productOverviewList = mutableListOf<ProductWithRequestCount>()
@@ -31,15 +35,31 @@ class ContactRequestsActivity : AppCompatActivity() {
         binding = ActivityContactRequestsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        viewModel = ViewModelProvider(this)[ContactRequestsViewModel::class.java]
+
         ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.updatePadding(top = systemBars.top)
             insets
         }
 
+        observeViewModel()
         setupToolbar()
         setupRecyclerView()
         loadProductOverview()
+    }
+
+    private fun observeViewModel() {
+        viewModel.isLoading.observe(this) { isLoading ->
+            binding.loadingIndicator.visibility = if (isLoading) View.VISIBLE else View.GONE
+            binding.rvRequests.visibility = if (isLoading) View.GONE else View.VISIBLE
+            if (isLoading) {
+                binding.llEmptyState.visibility = View.GONE
+                binding.tvSubtitle.visibility = View.GONE
+            } else {
+                binding.tvSubtitle.visibility = View.VISIBLE
+            }
+        }
     }
 
     private fun setupToolbar() {
@@ -63,9 +83,11 @@ class ContactRequestsActivity : AppCompatActivity() {
     private fun loadProductOverview() {
         val currentSellerUid = FirebaseAuth.getInstance().currentUser?.uid ?: return
 
+        viewModel.setLoading(true)
         contactRepository.getIncomingRequests(currentSellerUid,
             onSuccess = { allRequests ->
                 if (allRequests.isEmpty()) {
+                    viewModel.setLoading(false)
                     updateEmptyState(true)
                     return@getIncomingRequests
                 }
@@ -77,6 +99,7 @@ class ContactRequestsActivity : AppCompatActivity() {
                 fetchProductsAndCounts(productIds, groupedRequests)
             },
             onFailure = { e ->
+                viewModel.setLoading(false)
                 Toast.makeText(this, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
             }
         )
@@ -114,6 +137,7 @@ class ContactRequestsActivity : AppCompatActivity() {
     }
 
     private fun finalizeList(list: List<ProductWithRequestCount>) {
+        viewModel.setLoading(false)
         productOverviewList.clear()
         productOverviewList.addAll(list.sortedByDescending { it.product.createdAt })
         adapter.notifyDataSetChanged()

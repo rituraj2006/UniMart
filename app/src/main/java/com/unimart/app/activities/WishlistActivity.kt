@@ -9,15 +9,18 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.GridLayoutManager
 import com.unimart.app.adapters.ProductAdapter
 import com.unimart.app.databinding.ActivityWishlistBinding
 import com.unimart.app.models.Product
 import com.unimart.app.repositories.WishlistRepository
+import com.unimart.app.viewmodels.WishlistViewModel
 
 class WishlistActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityWishlistBinding
+    private lateinit var viewModel: WishlistViewModel
     private val wishlistRepository = WishlistRepository()
     
     private val wishlistProducts = mutableListOf<Product>()
@@ -30,14 +33,25 @@ class WishlistActivity : AppCompatActivity() {
         binding = ActivityWishlistBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        viewModel = ViewModelProvider(this)[WishlistViewModel::class.java]
+
         ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.updatePadding(top = systemBars.top)
             insets
         }
 
+        observeViewModel()
         setupToolbar()
         setupRecyclerView()
+    }
+
+    private fun observeViewModel() {
+        viewModel.isLoading.observe(this) { isLoading ->
+            binding.loadingIndicator.visibility = if (isLoading) View.VISIBLE else View.GONE
+            binding.rvWishlist.visibility = if (isLoading) View.GONE else View.VISIBLE
+            if (isLoading) binding.llEmptyState.visibility = View.GONE
+        }
     }
 
     override fun onResume() {
@@ -67,12 +81,14 @@ class WishlistActivity : AppCompatActivity() {
     }
 
     private fun loadWishlistData() {
+        viewModel.setLoading(true)
         wishlistRepository.getWishlistedProductIds(
             onSuccess = { ids ->
                 wishlistedIds = ids
                 fetchFullProducts()
             },
             onFailure = { 
+                viewModel.setLoading(false)
                 Toast.makeText(this, "Failed to load wishlist IDs", Toast.LENGTH_SHORT).show()
             }
         )
@@ -81,6 +97,7 @@ class WishlistActivity : AppCompatActivity() {
     private fun fetchFullProducts() {
         wishlistRepository.getWishlistProducts(
             onSuccess = { products ->
+                viewModel.setLoading(false)
                 wishlistProducts.clear()
                 wishlistProducts.addAll(products)
                 
@@ -89,6 +106,7 @@ class WishlistActivity : AppCompatActivity() {
                 updateEmptyState()
             },
             onFailure = {
+                viewModel.setLoading(false)
                 Toast.makeText(this, "Failed to load products", Toast.LENGTH_SHORT).show()
             }
         )
