@@ -10,11 +10,16 @@ import com.unimart.app.databinding.ItemProductBinding
 import com.unimart.app.models.Product
 
 class ProductAdapter(
-    private val products: List<Product>,
+    private var products: List<Product>,
     private var wishlistedIds: Set<String> = emptySet(),
     private val onProductClick: (Product) -> Unit,
     private val onWishlistClick: (Product, Boolean) -> Unit
 ) : RecyclerView.Adapter<ProductAdapter.ProductViewHolder>() {
+
+    fun updateProducts(newList: List<Product>) {
+        this.products = newList
+        notifyDataSetChanged()
+    }
 
     fun updateWishlist(newIds: Set<String>) {
         this.wishlistedIds = newIds

@@ -2,6 +2,8 @@ package com.unimart.app.fragments
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,6 +12,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
@@ -26,14 +29,17 @@ import com.unimart.app.models.Category
 import com.unimart.app.models.Product
 import com.unimart.app.repositories.ProductRepository
 import com.unimart.app.repositories.WishlistRepository
+import com.unimart.app.viewmodels.HomeViewModel
 
 class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
 
+    private lateinit var viewModel: HomeViewModel
     private val repository = ProductRepository()
     private val wishlistRepository = WishlistRepository()
+    
     private val productList = mutableListOf<Product>()
     private var wishlistedIds = setOf<String>()
     private lateinit var productAdapter: ProductAdapter
@@ -50,6 +56,8 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        viewModel = ViewModelProvider(this)[HomeViewModel::class.java]
+
         ViewCompat.setOnApplyWindowInsetsListener(binding.toolbarHome) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.updatePadding(top = systemBars.top)
@@ -59,9 +67,12 @@ class HomeFragment : Fragment() {
         setupCategories()
         setupRecyclerView()
         setupClickListeners()
+        setupSearch()
         loadWishlist()
         loadProducts()
         loadCurrentUserProfile()
+        
+        observeViewModel()
     }
 
     override fun onResume() {
@@ -69,6 +80,25 @@ class HomeFragment : Fragment() {
         loadWishlist()
         loadProducts()
         loadCurrentUserProfile()
+    }
+
+    private fun observeViewModel() {
+        viewModel.filteredProducts.observe(viewLifecycleOwner) { filteredList ->
+            if (::productAdapter.isInitialized) {
+                productAdapter.updateProducts(filteredList)
+                updateEmptyState(filteredList.isEmpty())
+            }
+        }
+    }
+
+    private fun setupSearch() {
+        binding.etSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                viewModel.searchProducts(s?.toString() ?: "")
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
     }
 
     private fun loadWishlist() {
@@ -79,7 +109,7 @@ class HomeFragment : Fragment() {
                     productAdapter.updateWishlist(wishlistedIds)
                 }
             },
-            onFailure = { /* Silent fail */ }
+            onFailure = { }
         )
     }
 
@@ -94,9 +124,7 @@ class HomeFragment : Fragment() {
             Category(Categories.NOTES, R.drawable.ic_search),
             Category(Categories.ACCESSORIES, R.drawable.ic_search)
         )
-
-        binding.rvCategories.layoutManager =
-            LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+        binding.rvCategories.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         binding.rvCategories.adapter = CategoryAdapter(categoryList)
     }
 
@@ -119,12 +147,8 @@ class HomeFragment : Fragment() {
 
     private fun toggleWishlist(productId: String, isSaved: Boolean) {
         wishlistRepository.toggleWishlist(productId, isSaved,
-            onSuccess = { _ ->
-                loadWishlist() // Refresh IDs and UI
-            },
-            onFailure = {
-                Toast.makeText(context, "Failed to update wishlist", Toast.LENGTH_SHORT).show()
-            }
+            onSuccess = { _ -> loadWishlist() },
+            onFailure = { Toast.makeText(context, "Failed to update wishlist", Toast.LENGTH_SHORT).show() }
         )
     }
 
@@ -136,25 +160,27 @@ class HomeFragment : Fragment() {
             .addOnSuccessListener { querySnapshot ->
                 if (_binding == null) return@addOnSuccessListener
                 
-                productList.clear()
+                val newProducts = mutableListOf<Product>()
                 for (doc in querySnapshot) {
                     try {
                         val product = doc.toObject(Product::class.java)
                         if (product.status == "AVAILABLE") {
-                            productList.add(product)
+                            newProducts.add(product)
                         }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
+                    } catch (e: Exception) { e.printStackTrace() }
                 }
-                productAdapter.notifyDataSetChanged()
-                updateEmptyState()
+                
+                productList.clear()
+                productList.addAll(newProducts)
+                
+                // Initialize the ViewModel with the loaded products for in-memory searching
+                viewModel.setAllProducts(newProducts)
+                
+                updateEmptyState(productList.isEmpty())
             }
             .addOnFailureListener { e ->
                 if (_binding == null) return@addOnFailureListener
-                context?.let {
-                    Toast.makeText(it, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                }
+                context?.let { Toast.makeText(it, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show() }
             }
     }
 
@@ -173,9 +199,9 @@ class HomeFragment : Fragment() {
         )
     }
 
-    private fun updateEmptyState() {
+    private fun updateEmptyState(isEmpty: Boolean) {
         if (_binding == null) return
-        if (productList.isEmpty()) {
+        if (isEmpty) {
             binding.llEmptyState.visibility = View.VISIBLE
             binding.rvProducts.visibility = View.GONE
         } else {
