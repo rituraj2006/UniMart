@@ -125,7 +125,9 @@ class HomeFragment : Fragment() {
             Category(Categories.ACCESSORIES, R.drawable.ic_search)
         )
         binding.rvCategories.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
-        binding.rvCategories.adapter = CategoryAdapter(categoryList)
+        binding.rvCategories.adapter = CategoryAdapter(categoryList) { category ->
+            viewModel.selectCategory(category.name)
+        }
     }
 
     private fun setupRecyclerView() {

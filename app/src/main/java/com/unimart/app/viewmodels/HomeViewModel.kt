@@ -11,31 +11,53 @@ class HomeViewModel : ViewModel() {
     private val _filteredProducts = MutableLiveData<List<Product>>()
     val filteredProducts: LiveData<List<Product>> = _filteredProducts
 
+    private var currentSearchQuery = ""
+    private var selectedCategory: String? = null
+
     /**
      * Initializes the master list. Called once when data is loaded from Repository.
      */
     fun setAllProducts(products: List<Product>) {
         allProducts.clear()
         allProducts.addAll(products)
-        _filteredProducts.value = products
+        applyFilters()
     }
 
     /**
-     * Filters the master list in-memory based on title or category.
+     * Updates the search query and applies all filters.
      */
     fun searchProducts(query: String) {
-        val trimmedQuery = query.trim().lowercase()
+        currentSearchQuery = query.trim().lowercase()
+        applyFilters()
+    }
 
-        if (trimmedQuery.isEmpty()) {
-            _filteredProducts.value = allProducts
-            return
+    /**
+     * Updates the selected category and applies all filters.
+     */
+    fun selectCategory(category: String?) {
+        selectedCategory = if (category == "All") null else category
+        applyFilters()
+    }
+
+    /**
+     * Combines category and search filters and updates the LiveData.
+     */
+    private fun applyFilters() {
+        var result = allProducts.toList()
+
+        // 1. Filter by Category
+        selectedCategory?.let { category ->
+            result = result.filter { it.category == category }
         }
 
-        val filtered = allProducts.filter { product ->
-            product.title.lowercase().contains(trimmedQuery) ||
-            product.category.lowercase().contains(trimmedQuery)
+        // 2. Filter by Search Query
+        if (currentSearchQuery.isNotEmpty()) {
+            result = result.filter { product ->
+                product.title.lowercase().contains(currentSearchQuery) ||
+                product.category.lowercase().contains(currentSearchQuery)
+            }
         }
-        
-        _filteredProducts.value = filtered
+
+        _filteredProducts.value = result
     }
 }
