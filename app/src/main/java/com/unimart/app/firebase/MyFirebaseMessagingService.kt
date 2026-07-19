@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -13,6 +14,7 @@ import com.unimart.app.MainActivity
 import com.unimart.app.R
 import com.unimart.app.repositories.AuthRepository
 import com.unimart.app.utils.ChatSessionManager
+import com.unimart.app.utils.NotificationHelper
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
@@ -24,19 +26,24 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
+        Log.d("FCM", "Message received from: ${remoteMessage.from}")
 
-        val title = remoteMessage.notification?.title ?: remoteMessage.data["title"]
-        val body = remoteMessage.notification?.body ?: remoteMessage.data["body"]
+        // Now reading title and body exclusively from data block for reliability
+        val title = remoteMessage.data["title"]
+        val body = remoteMessage.data["body"]
         val type = remoteMessage.data["type"]
         val chatId = remoteMessage.data["chatId"]
         val productId = remoteMessage.data["productId"]
+        
+        Log.d("FCM", "Title: $title, Body: $body, Type: $type")
 
         // Fix: Don't show system notification if the user is already in this specific chat
         if (chatId != null && chatId == ChatSessionManager.activeChatId) {
+            Log.d("FCM", "User is active in this chat. Notification suppressed.")
             return
         }
 
-        if (title != null && body != null) {
+        if (!title.isNullOrEmpty() && !body.isNullOrEmpty()) {
             showNotification(title, body, type, chatId, productId)
         }
     }
@@ -49,44 +56,45 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         productId: String?
     ) {
         val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("type", type)
             putExtra("chatId", chatId)
             putExtra("productId", productId)
             putExtra("fromNotification", true)
         }
 
+        // Use a unique requestCode to prevent overwriting pending intents
+        val requestCode = System.currentTimeMillis().toInt()
         val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent,
-            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+            this, requestCode, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val channelId = when (type) {
-            "CHAT_REQUEST" -> "chat_requests_channel"
-            "MESSAGE" -> "messages_channel"
-            else -> "general_channel"
+            "CHAT_REQUEST" -> NotificationHelper.CHANNEL_CHAT_REQUESTS
+            "MESSAGE" -> NotificationHelper.CHANNEL_MESSAGES
+            else -> NotificationHelper.CHANNEL_GENERAL
         }
 
+        // Use a high-priority builder configuration
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.ic_messages) // Ensure this icon exists or use a generic one
+            .setSmallIcon(R.drawable.ic_messages) 
             .setContentTitle(title)
             .setContentText(body)
             .setAutoCancel(true)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setPriority(NotificationCompat.PRIORITY_MAX) 
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setOngoing(false) // Ensure it's dismissible
+            .setOnlyAlertOnce(false) // Re-alert for new messages
 
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        
+        // Ensure channels are created (fallback)
+        NotificationHelper.initNotificationChannels(this)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channelName = when (type) {
-                "CHAT_REQUEST" -> "Chat Requests"
-                "MESSAGE" -> "Messages"
-                else -> "General"
-            }
-            val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH)
-            notificationManager.createNotificationChannel(channel)
-        }
-
-        notificationManager.notify(System.currentTimeMillis().toInt(), notificationBuilder.build())
+        notificationManager.notify(requestCode, notificationBuilder.build())
     }
 }

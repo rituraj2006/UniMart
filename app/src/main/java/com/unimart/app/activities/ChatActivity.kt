@@ -154,7 +154,7 @@ class ChatActivity : AppCompatActivity() {
                     binding.llEmptyChat.visibility = if (messages.isEmpty()) View.VISIBLE else View.GONE
                     adapter.submitList(messages) {
                         if (messages.isNotEmpty()) {
-                            binding.rvMessages.smoothScrollToPosition(messages.size - 1)
+                            binding.rvMessages.scrollToPosition(messages.size - 1)
                         }
                     }
                 }

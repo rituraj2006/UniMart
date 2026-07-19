@@ -23,6 +23,7 @@ import com.unimart.app.fragments.HomeFragment
 import com.unimart.app.fragments.MessagesFragment
 import com.unimart.app.fragments.ProfileFragment
 import com.unimart.app.repositories.AuthRepository
+import com.unimart.app.utils.NotificationHelper
 
 class MainActivity : AppCompatActivity() {
 
@@ -42,6 +43,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        NotificationHelper.initNotificationChannels(this)
         askNotificationPermission()
         updateFcmToken()
         setupBottomNavBadges()

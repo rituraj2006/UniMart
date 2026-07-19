@@ -79,14 +79,15 @@ class ChatRepositoryImpl : ChatRepository {
     override fun getChatMessages(chatId: String, limit: Long): Flow<Resource<List<Message>>> = callbackFlow {
         trySend(Resource.Loading)
         val listener = FirestoreHelper.getMessagesCollection(chatId)
-            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
             .limit(limit)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     trySend(Resource.Failure(error))
                     return@addSnapshotListener
                 }
-                val messages = snapshot?.toObjects(Message::class.java) ?: emptyList()
+                // Sort ascending for the UI (Oldest -> Newest) after fetching the latest batch
+                val messages = snapshot?.toObjects(Message::class.java)?.reversed() ?: emptyList()
                 trySend(Resource.Success(messages))
             }
         awaitClose { listener.remove() }
@@ -126,7 +127,9 @@ class ChatRepositoryImpl : ChatRepository {
                 "lastTimestamp" to message.timestamp
             )
 
-            val chatDoc = chatRef.get().await()
+            // Logic: Increment unread count for the receiver ONLY if they are NOT active in the chat
+            // CRITICAL: We MUST use Source.SERVER to ensure the other user actually sees the notification.
+            val chatDoc = chatRef.get(com.google.firebase.firestore.Source.SERVER).await()
             @Suppress("UNCHECKED_CAST")
             val activeParticipants = chatDoc.get("activeParticipants") as? List<String> ?: emptyList()
             @Suppress("UNCHECKED_CAST")
@@ -199,7 +202,7 @@ class ChatRepositoryImpl : ChatRepository {
 
             try {
                 val currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
-                val chatDoc = chatCollection.document(chatId).get().await()
+                val chatDoc = chatCollection.document(chatId).get(com.google.firebase.firestore.Source.SERVER).await()
                 @Suppress("UNCHECKED_CAST")
                 val participants = chatDoc.get("participants") as? List<String> ?: emptyList()
                 @Suppress("UNCHECKED_CAST")

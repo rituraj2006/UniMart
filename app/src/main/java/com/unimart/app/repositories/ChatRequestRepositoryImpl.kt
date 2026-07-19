@@ -6,6 +6,10 @@ import com.unimart.app.constants.ChatRequestStatus
 import com.unimart.app.models.ChatRequest
 import com.unimart.app.utils.FirestoreHelper
 import com.unimart.app.utils.Resource
+import com.unimart.app.network.FcmApi
+import com.unimart.app.network.ProxyPayload
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -15,20 +19,41 @@ class ChatRequestRepositoryImpl : ChatRequestRepository {
 
     private val requestCollection = FirestoreHelper.getChatRequestsCollection()
 
+    private val fcmApi: FcmApi by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://unimart-proxy.onrender.com/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(FcmApi::class.java)
+    }
+
     override suspend fun sendChatRequest(request: ChatRequest): Resource<Unit> {
         return try {
-            // Rule: One Buyer + One Product = One Request.
-            // Using productId_buyerId as document ID enforces this natively.
             val docId = "${request.productId}_${request.buyerId}"
             val docRef = requestCollection.document(docId)
             
             val existing = docRef.get().await()
             if (existing.exists()) {
-                // If it already exists, we don't overwrite to avoid resetting status or createdAt
                 return Resource.Success(Unit) 
             }
             
             docRef.set(request.copy(requestId = docId)).await()
+
+            // --- New: Notify Seller ---
+            try {
+                val sellerDoc = FirestoreHelper.getUsersCollection().document(request.sellerId).get().await()
+                val token = sellerDoc.getString("fcmToken")
+                if (!token.isNullOrEmpty()) {
+                    val payload = ProxyPayload(
+                        token = token,
+                        title = "New Chat Request",
+                        body = "${request.buyerName} wants to chat about \"${request.productTitle}\"",
+                        data = mapOf("type" to "CHAT_REQUEST", "productId" to request.productId)
+                    )
+                    fcmApi.sendNotification(payload)
+                }
+            } catch (e: Exception) { e.printStackTrace() }
+
             Resource.Success(Unit)
         } catch (e: Exception) {
             Resource.Failure(e)
