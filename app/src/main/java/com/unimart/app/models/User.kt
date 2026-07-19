@@ -6,5 +6,6 @@ data class User(
     val email: String = "",
     val whatsappNumber: String = "",
     val profileImage: String = "",
-    val joinedDate: Long = 0L
+    val joinedDate: Long = 0L,
+    val fcmToken: String = ""
 )

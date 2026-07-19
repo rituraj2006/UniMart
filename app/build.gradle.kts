@@ -36,6 +36,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/DEPENDENCIES"
+        }
+    }
 }
 
 dependencies {
@@ -43,6 +49,7 @@ dependencies {
 
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-messaging")
 
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
@@ -55,11 +62,16 @@ dependencies {
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
 
     implementation(libs.androidx.activity.ktx)
+    implementation(libs.androidx.fragment.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.lifecycle.livedata.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.core.ktx)
     implementation(libs.material)
     implementation(libs.androidx.swiperefreshlayout)
+    implementation("com.google.auth:google-auth-library-oauth2-http:1.19.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)

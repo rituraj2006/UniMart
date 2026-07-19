@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.UniMart.Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="8dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <!-- Buyer Profile Section -->
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/ivBuyerImage"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_profile_placeholder"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
+            app:strokeColor="@color/unimart_primary"
+            app:strokeWidth="1dp" />
+
+        <View
+            android:id="@+id/viewOnlineStatus"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:background="@drawable/bg_badge"
+            android:backgroundTint="#22C55E"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="@id/ivBuyerImage"
+            app:layout_constraintEnd_toEndOf="@id/ivBuyerImage"
+            tools:visibility="visible" />
+
+        <TextView
+            android:id="@+id/tvBuyerName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@+id/tvTime"
+            app:layout_constraintStart_toEndOf="@id/ivBuyerImage"
+            app:layout_constraintTop_toTopOf="@id/ivBuyerImage"
+            tools:text="Ritu Raj Singh" />
+
+        <TextView
+            android:id="@+id/tvTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/unimart_text_secondary"
+            android:textSize="12sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/tvBuyerName"
+            tools:text="Today • 12:21 PM" />
+
+        <!-- Product Context Section -->
+        <LinearLayout
+            android:id="@+id/llProductInfo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@color/unimart_surface_elevated"
+            android:orientation="horizontal"
+            android:padding="10dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@id/tvBuyerName"
+            app:layout_constraintTop_toBottomOf="@id/tvBuyerName">
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/ivProductImage"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:scaleType="centerCrop"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Small"
+                tools:src="@drawable/ic_search" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_marginStart="12dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Requested to chat about"
+                    android:textColor="@color/unimart_text_secondary"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/tvProductTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="@color/white"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    tools:text="Spider Wallpaper" />
+
+                <TextView
+                    android:id="@+id/tvProductPrice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"
+                    android:textSize="13sp"
+                    tools:text="₹150" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Action Buttons -->
+        <LinearLayout
+            android:id="@+id/llActions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:orientation="horizontal"
+            app:layout_constraintTop_toBottomOf="@id/llProductInfo">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAccept"
+                style="@style/Widget.Material3.Button"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="Accept"
+                android:textAllCaps="false"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                app:backgroundTint="@color/unimart_primary"
+                app:cornerRadius="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnReject"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_weight="1"
+                android:text="Reject"
+                android:textAllCaps="false"
+                android:textColor="@color/unimart_error"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                app:cornerRadius="12dp"
+                app:strokeColor="@color/unimart_error" />
+
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>

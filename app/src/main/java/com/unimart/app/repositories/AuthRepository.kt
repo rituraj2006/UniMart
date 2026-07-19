@@ -108,6 +108,14 @@ class AuthRepository {
     }
 
     /**
+     * Updates the FCM token for the current user in Firestore.
+     */
+    fun updateFcmToken(token: String) {
+        val uid = auth.currentUser?.uid ?: return
+        firestore.collection("Users").document(uid).update("fcmToken", token)
+    }
+
+    /**
      * Signs out the current user.
      */
     fun signOut() {

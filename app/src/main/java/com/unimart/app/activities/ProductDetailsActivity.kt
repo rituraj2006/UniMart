@@ -12,6 +12,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.animation.OvershootInterpolator
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -28,14 +29,12 @@ import com.google.firebase.auth.FirebaseAuth
 import com.unimart.app.R
 import com.unimart.app.adapters.ProductImagesAdapter
 import com.unimart.app.constants.ProductStatus
-import com.unimart.app.constants.RequestStatus
 import com.unimart.app.databinding.ActivityProductDetailsBinding
-import com.unimart.app.models.ContactRequest
 import com.unimart.app.models.Product
 import com.unimart.app.models.User
-import com.unimart.app.repositories.ContactRepository
 import com.unimart.app.repositories.ProductRepository
 import com.unimart.app.repositories.WishlistRepository
+import com.unimart.app.utils.Resource
 import java.util.Calendar
 import java.util.Locale
 
@@ -43,13 +42,13 @@ class ProductDetailsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityProductDetailsBinding
     private lateinit var viewModel: com.unimart.app.viewmodels.ProductDetailsViewModel
+    private val chatRequestViewModel: com.unimart.app.viewmodels.ChatRequestViewModel by viewModels()
     private val productRepository = ProductRepository()
-    private val contactRepository = ContactRepository()
     private val wishlistRepository = WishlistRepository()
     
     private var currentProduct: Product? = null
     private var sellerUser: User? = null
-    private var currentRequest: ContactRequest? = null
+    private var currentUserProfile: User? = null
     private var isWishlisted: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,6 +59,7 @@ class ProductDetailsActivity : AppCompatActivity() {
         viewModel = ViewModelProvider(this)[com.unimart.app.viewmodels.ProductDetailsViewModel::class.java]
 
         observeViewModel()
+        observeChatRequestViewModel()
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -76,6 +76,7 @@ class ProductDetailsActivity : AppCompatActivity() {
 
         setupToolbar()
         loadProductDetails(productId)
+        loadCurrentUserProfile()
         checkWishlistStatus(productId)
 
         binding.ivWishlist.setOnClickListener {
@@ -156,7 +157,7 @@ class ProductDetailsActivity : AppCompatActivity() {
                 if (isFinishing) return@getProductById
                 currentProduct = product
                 populateUI(product)
-                checkContactRequestStatus()
+                checkChatRequestStatus()
                 invalidateOptionsMenu()
             },
             onFailure = {
@@ -167,7 +168,28 @@ class ProductDetailsActivity : AppCompatActivity() {
         )
     }
 
-    private fun checkContactRequestStatus() {
+    private fun observeChatRequestViewModel() {
+        chatRequestViewModel.requestStatus.observe(this) { resource ->
+            when (resource) {
+                is Resource.Loading -> {
+                    binding.btnContactSeller.isEnabled = false
+                    binding.btnContactSeller.text = "Sending..."
+                }
+                is Resource.Success -> {
+                    Snackbar.make(binding.root, "Request sent successfully.", Snackbar.LENGTH_SHORT).show()
+                    checkChatRequestStatus()
+                }
+                is Resource.Failure -> {
+                    binding.btnContactSeller.isEnabled = true
+                    binding.btnContactSeller.text = "Request Chat"
+                    Toast.makeText(this, resource.exception.message, Toast.LENGTH_SHORT).show()
+                }
+                else -> {}
+            }
+        }
+    }
+
+    private fun checkChatRequestStatus() {
         val currentUser = FirebaseAuth.getInstance().currentUser ?: return
         val product = currentProduct ?: return
         
@@ -182,79 +204,38 @@ class ProductDetailsActivity : AppCompatActivity() {
             return
         }
 
-        binding.btnContactSeller.isEnabled = false
-        contactRepository.getBuyerRequestForProduct(currentUser.uid, product.productId,
-            onSuccess = { request ->
-                if (isFinishing) return@getBuyerRequestForProduct
-                currentRequest = request
-                updateContactButtonUI()
-            },
-            onFailure = {
-                if (isFinishing) return@getBuyerRequestForProduct
-                Toast.makeText(this, "Something went wrong.", Toast.LENGTH_SHORT).show()
-                binding.btnContactSeller.isEnabled = true
-            }
-        )
+        // Logic to check if request productId_buyerId exists
+        // This will be expanded when checkExistingRequest is fully implemented
+        binding.btnContactSeller.text = "Request Chat"
+        binding.btnContactSeller.setOnClickListener { sendNewChatRequest() }
     }
 
-    private fun updateContactButtonUI() {
-        val request = currentRequest
-        if (request == null) {
-            binding.btnContactSeller.text = "Contact Seller"
-            binding.btnContactSeller.isEnabled = true
-            binding.btnContactSeller.setOnClickListener { showRequestContactDialog() }
-        } else {
-            when (request.status) {
-                RequestStatus.PENDING -> {
-                    binding.btnContactSeller.text = "Waiting for Approval"
-                    binding.btnContactSeller.isEnabled = false
-                }
-                RequestStatus.ACCEPTED -> {
-                    binding.btnContactSeller.text = "Chat on WhatsApp"
-                    binding.btnContactSeller.isEnabled = true
-                    binding.btnContactSeller.setOnClickListener { openWhatsApp() }
-                }
-                RequestStatus.REJECTED -> {
-                    binding.btnContactSeller.text = "Request Rejected"
-                    binding.btnContactSeller.isEnabled = false
-                }
-                RequestStatus.AUTO_REJECTED -> {
-                    binding.btnContactSeller.text = "Product Sold"
-                    binding.btnContactSeller.isEnabled = false
-                }
-            }
-        }
-    }
-
-    private fun showRequestContactDialog() {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_request_contact, null)
-        val etMessage = dialogView.findViewById<TextInputEditText>(R.id.etRequestMessage)
-        etMessage.setText("Hi, I'm interested in your product. Is it still available?")
-
-        AlertDialog.Builder(this)
-            .setTitle("Contact Seller")
-            .setView(dialogView)
-            .setPositiveButton("Send Request") { _: DialogInterface, _: Int ->
-                sendContactRequest(etMessage.text.toString().trim())
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun sendContactRequest(message: String) {
-        val currentUser = FirebaseAuth.getInstance().currentUser ?: return
+    private fun sendNewChatRequest() {
+        val user = FirebaseAuth.getInstance().currentUser ?: return
         val product = currentProduct ?: return
-        binding.btnContactSeller.isEnabled = false
+        val profile = currentUserProfile ?: return Toast.makeText(this, "Profile not loaded. Try again.", Toast.LENGTH_SHORT).show()
+        
+        val request = com.unimart.app.models.ChatRequest(
+            productId = product.productId,
+            sellerId = product.sellerId,
+            buyerId = user.uid,
+            buyerName = profile.name,
+            buyerImage = profile.profileImage,
+            productTitle = product.title,
+            productImage = product.imageUrls.firstOrNull() ?: "",
+            productPrice = product.price,
+            status = com.unimart.app.constants.ChatRequestStatus.PENDING
+        )
+        chatRequestViewModel.sendRequest(request)
+    }
 
-        contactRepository.createContactRequest(currentUser.uid, product.sellerId, product.productId, message,
-            onSuccess = {
-                Snackbar.make(binding.root, "Request sent successfully.", Snackbar.LENGTH_SHORT).show()
-                checkContactRequestStatus()
+    private fun loadCurrentUserProfile() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        productRepository.getUserById(uid,
+            onSuccess = { user ->
+                currentUserProfile = user
             },
-            onFailure = {
-                Toast.makeText(this, "Something went wrong.", Toast.LENGTH_SHORT).show()
-                binding.btnContactSeller.isEnabled = true
-            }
+            onFailure = { }
         )
     }
 
@@ -341,7 +322,20 @@ class ProductDetailsActivity : AppCompatActivity() {
     }
 
     private fun markAsSold() {
-        currentProduct?.let { productRepository.markProductAsSold(it.productId, onSuccess = { contactRepository.autoRejectPendingRequests(it.productId, onSuccess = { finish() }, onFailure = { finish() }) }, onFailure = { }) }
+        currentProduct?.let { product -> 
+            productRepository.markProductAsSold(product.productId, 
+                onSuccess = { 
+                    // 1. Reject all pending requests
+                    chatRequestViewModel.autoRejectRequests(product.productId) {
+                        // 2. Mark all active chats as SOLD
+                        val chatViewModel: com.unimart.app.viewmodels.ChatViewModel by viewModels()
+                        chatViewModel.markProductAsSold(product.productId)
+                        finish()
+                    }
+                }, 
+                onFailure = { }
+            ) 
+        }
     }
 
     private fun confirmDelete() {

@@ -1,156 +1,128 @@
 package com.unimart.app.activities
 
-import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updatePadding
-import androidx.core.view.updatePadding
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.auth.FirebaseAuth
-import com.unimart.app.adapters.ProductRequestsOverviewAdapter
+import com.unimart.app.adapters.SellerRequestAdapter
+import com.unimart.app.constants.ChatStatus
 import com.unimart.app.databinding.ActivityContactRequestsBinding
-import com.unimart.app.models.ProductWithRequestCount
-import com.unimart.app.repositories.ContactRepository
-import com.unimart.app.repositories.ProductRepository
-import com.unimart.app.viewmodels.ContactRequestsViewModel
+import com.unimart.app.models.Chat
+import com.unimart.app.models.ChatRequest
+import com.unimart.app.utils.Resource
+import com.unimart.app.viewmodels.SellerRequestsViewModel
+import kotlinx.coroutines.launch
 
 class ContactRequestsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityContactRequestsBinding
-    private lateinit var viewModel: ContactRequestsViewModel
-    private val contactRepository = ContactRepository()
-    private val productRepository = ProductRepository()
-    private val productOverviewList = mutableListOf<ProductWithRequestCount>()
-    private lateinit var adapter: ProductRequestsOverviewAdapter
+    private val viewModel: SellerRequestsViewModel by viewModels()
+    private val productRepository = com.unimart.app.repositories.ProductRepository()
+    private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    private var currentUser: com.unimart.app.models.User? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         binding = ActivityContactRequestsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        viewModel = ViewModelProvider(this)[ContactRequestsViewModel::class.java]
-
-        ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.updatePadding(top = systemBars.top)
-            insets
-        }
-
-        observeViewModel()
         setupToolbar()
-        setupRecyclerView()
-        loadProductOverview()
+        loadCurrentUser()
+        observeRequests()
+        observeActions()
     }
 
-    private fun observeViewModel() {
-        viewModel.isLoading.observe(this) { isLoading ->
-            binding.loadingIndicator.visibility = if (isLoading) View.VISIBLE else View.GONE
-            binding.rvRequests.visibility = if (isLoading) View.GONE else View.VISIBLE
-            if (isLoading) {
-                binding.llEmptyState.visibility = View.GONE
-                binding.tvSubtitle.visibility = View.GONE
-            } else {
-                binding.tvSubtitle.visibility = View.VISIBLE
-            }
-        }
-    }
-
-    private fun setupToolbar() {
-        binding.toolbar.setNavigationOnClickListener {
-            finish()
-        }
-    }
-
-    private fun setupRecyclerView() {
-        adapter = ProductRequestsOverviewAdapter(productOverviewList) { item ->
-            val intent = Intent(this, ProductRequestsActivity::class.java).apply {
-                putExtra("PRODUCT_ID", item.product.productId)
-                putExtra("PRODUCT_TITLE", item.product.title)
-            }
-            startActivity(intent)
-        }
-        binding.rvRequests.layoutManager = LinearLayoutManager(this)
-        binding.rvRequests.adapter = adapter
-    }
-
-    private fun loadProductOverview() {
-        val currentSellerUid = FirebaseAuth.getInstance().currentUser?.uid ?: return
-
-        viewModel.setLoading(true)
-        contactRepository.getIncomingRequests(currentSellerUid,
-            onSuccess = { allRequests ->
-                if (allRequests.isEmpty()) {
-                    viewModel.setLoading(false)
-                    updateEmptyState(true)
-                    return@getIncomingRequests
-                }
-
-                // Group requests by productId
-                val groupedRequests = allRequests.groupBy { it.productId }
-                val productIds = groupedRequests.keys.toList()
-                
-                fetchProductsAndCounts(productIds, groupedRequests)
-            },
-            onFailure = { e ->
-                viewModel.setLoading(false)
-                Toast.makeText(this, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
-            }
+    private fun loadCurrentUser() {
+        productRepository.getUserById(currentUserId,
+            onSuccess = { user -> currentUser = user },
+            onFailure = { }
         )
     }
 
-    private fun fetchProductsAndCounts(
-        productIds: List<String>,
-        groupedRequests: Map<String, List<com.unimart.app.models.ContactRequest>>
-    ) {
-        val tempOverviewList = mutableListOf<ProductWithRequestCount>()
-        var fetchedCount = 0
+    private fun setupToolbar() {
+        binding.toolbar.setNavigationOnClickListener { finish() }
+    }
 
-        for (productId in productIds) {
-            productRepository.getProductById(productId,
-                onSuccess = { product ->
-                    val requests = groupedRequests[productId] ?: emptyList()
-                    val totalCount = requests.size
-                    val pendingCount = requests.count { it.status == com.unimart.app.constants.RequestStatus.PENDING }
-                    
-                    tempOverviewList.add(ProductWithRequestCount(product, totalCount, pendingCount))
-                    
-                    fetchedCount++
-                    if (fetchedCount == productIds.size) {
-                        finalizeList(tempOverviewList)
-                    }
-                },
-                onFailure = {
-                    fetchedCount++
-                    if (fetchedCount == productIds.size) {
-                        finalizeList(tempOverviewList)
+    private fun observeRequests() {
+        viewModel.getPendingRequests(currentUserId).observe(this) { resource: Resource<List<ChatRequest>> ->
+            when (resource) {
+                is Resource.Loading -> binding.loadingIndicator.visibility = View.VISIBLE
+                is Resource.Success -> {
+                    binding.loadingIndicator.visibility = View.GONE
+                    updateUI(resource.data)
+                }
+                is Resource.Failure -> {
+                    binding.loadingIndicator.visibility = View.GONE
+                    Toast.makeText(this, "Error: ${resource.exception.message}", Toast.LENGTH_SHORT).show()
+                }
+                else -> {}
+            }
+        }
+    }
+
+    private fun observeActions() {
+        lifecycleScope.launch {
+            viewModel.actionStatus.collect { resource ->
+                if (resource != null) {
+                    when (resource) {
+                        is Resource.Loading -> binding.loadingIndicator.visibility = View.VISIBLE
+                        is Resource.Success<String> -> {
+                            binding.loadingIndicator.visibility = View.GONE
+                            if (resource.data != "REJECTED") {
+                                Toast.makeText(this@ContactRequestsActivity, "Chat Created!", Toast.LENGTH_SHORT).show()
+                            }
+                            viewModel.clearActionStatus()
+                        }
+                        is Resource.Failure -> {
+                            binding.loadingIndicator.visibility = View.GONE
+                            Toast.makeText(this@ContactRequestsActivity, resource.exception.message, Toast.LENGTH_LONG).show()
+                            viewModel.clearActionStatus()
+                        }
+                        else -> {}
                     }
                 }
+            }
+        }
+    }
+
+    private fun updateUI(requests: List<ChatRequest>) {
+        if (requests.isEmpty()) {
+            binding.rvRequests.visibility = View.GONE
+            binding.llEmptyState.visibility = View.VISIBLE
+            binding.tvFooter.visibility = View.GONE
+        } else {
+            binding.llEmptyState.visibility = View.GONE
+            binding.rvRequests.visibility = View.VISIBLE
+            binding.tvFooter.visibility = View.VISIBLE
+            binding.rvRequests.layoutManager = LinearLayoutManager(this)
+            binding.rvRequests.adapter = SellerRequestAdapter(
+                requests,
+                onAcceptClick = { req -> accept(req) },
+                onRejectClick = { req -> viewModel.rejectRequest(req.requestId) }
             )
         }
     }
 
-    private fun finalizeList(list: List<ProductWithRequestCount>) {
-        viewModel.setLoading(false)
-        productOverviewList.clear()
-        productOverviewList.addAll(list.sortedByDescending { it.product.createdAt })
-        adapter.notifyDataSetChanged()
-        updateEmptyState(productOverviewList.isEmpty())
-    }
-
-    private fun updateEmptyState(isEmpty: Boolean) {
-        if (isEmpty) {
-            binding.llEmptyState.visibility = View.VISIBLE
-            binding.rvRequests.visibility = View.GONE
-        } else {
-            binding.llEmptyState.visibility = View.GONE
-            binding.rvRequests.visibility = View.VISIBLE
-        }
+    private fun accept(request: ChatRequest) {
+        val seller = currentUser ?: return
+        val chatMetadata = Chat(
+            productId = request.productId,
+            buyerId = request.buyerId,
+            sellerId = request.sellerId,
+            participants = listOf(request.buyerId, request.sellerId),
+            chatStatus = ChatStatus.ACTIVE,
+            buyerName = request.buyerName,
+            buyerImage = request.buyerImage,
+            sellerName = seller.name,
+            sellerImage = seller.profileImage,
+            title = request.productTitle,
+            price = request.productPrice,
+            thumbnail = request.productImage
+        )
+        viewModel.acceptRequest(request, chatMetadata)
     }
 }

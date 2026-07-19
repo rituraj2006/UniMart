@@ -39,7 +39,6 @@ class ProfileFragment : Fragment() {
 
     private lateinit var viewModel: ProfileViewModel
     private val repository = ProductRepository()
-    private val contactRepository = ContactRepository()
     private val wishlistRepository = WishlistRepository()
     private val auth = FirebaseAuth.getInstance()
     private lateinit var cloudinaryRepository: CloudinaryRepository
@@ -85,6 +84,8 @@ class ProfileFragment : Fragment() {
         binding.ivProfileImage.setOnClickListener {
             showImageOptions()
         }
+
+        binding.tvContactRequestsTitle.text = getString(R.string.contact_requests)
 
         binding.cardRequests.setOnClickListener {
             val intent = Intent(requireContext(), com.unimart.app.activities.ContactRequestsActivity::class.java)
@@ -229,18 +230,22 @@ class ProfileFragment : Fragment() {
 
         val uid = auth.currentUser?.uid
         if (uid != null) {
-            contactRepository.getPendingRequestsCount(uid,
-                onSuccess = { count ->
-                    if (_binding == null) return@getPendingRequestsCount
-                    if (count > 0) {
-                        binding.tvPendingBadge.text = count.toString()
-                        binding.tvPendingBadge.visibility = View.VISIBLE
-                    } else {
-                        binding.tvPendingBadge.visibility = View.GONE
+            // New logic: Use ChatRequestRepository to get count from correct collection
+            val chatReqRepo = com.unimart.app.repositories.ChatRequestRepositoryImpl()
+            lifecycleScope.launch {
+                chatReqRepo.getPendingRequestsForSeller(uid).collect { resource ->
+                    if (resource is com.unimart.app.utils.Resource.Success) {
+                        val count = resource.data.size
+                        if (_binding == null) return@collect
+                        if (count > 0) {
+                            binding.tvPendingBadge.text = count.toString()
+                            binding.tvPendingBadge.visibility = View.VISIBLE
+                        } else {
+                            binding.tvPendingBadge.visibility = View.GONE
+                        }
                     }
-                },
-                onFailure = { /* Silent fail */ }
-            )
+                }
+            }
         }
     }
 

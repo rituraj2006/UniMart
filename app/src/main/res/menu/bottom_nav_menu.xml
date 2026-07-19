@@ -7,6 +7,21 @@
         android:title="@string/home" />
 
     <item
+        android:id="@+id/nav_wishlist"
+        android:icon="@drawable/ic_wishlist_outline"
+        android:title="@string/wishlist" />
+
+    <item
+        android:id="@+id/nav_sell"
+        android:icon="@drawable/ic_add"
+        android:title="@string/sell" />
+
+    <item
+        android:id="@+id/nav_messages"
+        android:icon="@drawable/ic_messages"
+        android:title="@string/messages" />
+
+    <item
         android:id="@+id/nav_profile"
         android:icon="@drawable/ic_profile"
         android:title="@string/profile" />

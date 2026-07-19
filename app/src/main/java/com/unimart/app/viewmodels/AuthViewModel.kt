@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.messaging.FirebaseMessaging
 import com.unimart.app.models.User
 import com.unimart.app.repositories.AuthRepository
 
@@ -64,6 +65,10 @@ class AuthViewModel : ViewModel() {
                         repository.createUserProfile(user, {
                             // Step 3: Send verification email
                             repository.sendVerificationEmail(firebaseUser) {
+                                // Update FCM Token on Signup
+                                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                                    if (task.isSuccessful) repository.updateFcmToken(task.result)
+                                }
                                 repository.signOut()
                                 _isLoading.value = false
                                 _signupSuccess.value = true
@@ -105,6 +110,10 @@ class AuthViewModel : ViewModel() {
                 repository.reloadUser(firebaseUser) {
                     _isLoading.value = false
                     if (firebaseUser.isEmailVerified) {
+                        // Update FCM Token on Login
+                        com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                            if (task.isSuccessful) repository.updateFcmToken(task.result)
+                        }
                         _loginSuccess.value = firebaseUser
                     } else {
                         _loginSuccess.value = null // Means unverified

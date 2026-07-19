@@ -85,10 +85,20 @@
     <string name="my_listings">My Listings</string>
     <string name="logout">Logout</string>
     <string name="home">Home</string>
+    <string name="messages">Messages</string>
     <string name="profile">Profile</string>
     <string name="zero">0</string>
     <string name="campus_seller">Campus Seller</string>
     <string name="member_since">Member since 2026</string>
+
+    <!-- Messages / Inbox UI -->
+    <string name="no_conversations">No conversations yet</string>
+    <string name="no_conversations_subtitle">Accepted chat requests will appear here.</string>
+    <string name="error_loading_chats">Failed to load conversations</string>
+    <string name="image_preview">📷 Image</string>
+    <string name="type_message">Type a message...</string>
+    <string name="start_chat_hint">Start your conversation.\nBe respectful and discuss the product.</string>
+    <string name="yesterday">Yesterday</string>
 
     <!-- Profile Photo Bottom Sheet -->
     <string name="profile_photo">Profile Photo</string>
@@ -98,9 +108,10 @@
     <!-- Product Requests UI -->
     <string name="request_pending_badge">🟡 %1$d Pending</string>
     <string name="all_requests_handled">✓ All Handled</string>
-    <string name="contact_requests_subtitle">View and manage contact requests for your listed products.</string>
-    <string name="no_requests_title">No Contact Requests Yet</string>
-    <string name="no_requests_subtitle">When buyers request your products, they will appear here.</string>
+    <string name="contact_requests">Chat Requests</string>
+    <string name="contact_requests_subtitle">View and manage chat requests for your listed products.</string>
+    <string name="no_requests_title">No Pending Chat Requests</string>
+    <string name="no_requests_subtitle">When buyers want to chat about your products, they will appear here.</string>
     <string name="product_requests_title">Requests for: %1$s</string>
     <string name="recent_requests">Recent Requests</string>
     <string name="no_product_requests_title">No Requests Yet</string>
