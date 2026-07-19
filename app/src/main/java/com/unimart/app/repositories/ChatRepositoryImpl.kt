@@ -1,6 +1,7 @@
 package com.unimart.app.repositories
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.unimart.app.constants.PhoneSharingStatus
@@ -127,24 +128,34 @@ class ChatRepositoryImpl : ChatRepository {
             
             // Update Chat metadata
             val previewText = if (message.type == MessageType.IMAGE) "📷 Image" else message.content
-            val updates = mapOf(
+            val updates = mutableMapOf<String, Any>(
                 "lastMessagePreview" to previewText,
                 "lastSenderId" to message.senderId,
                 "lastTimestamp" to message.timestamp
             )
+
+            // Logic: Increment unread count for the receiver ONLY if they are NOT active in the chat
+            val chatDoc = chatRef.get().await()
+            @Suppress("UNCHECKED_CAST")
+            val activeParticipants = chatDoc.get("activeParticipants") as? List<String> ?: emptyList()
+            @Suppress("UNCHECKED_CAST")
+            val participants = chatDoc.get("participants") as? List<String> ?: emptyList()
+            val receiverId = participants.find { it != message.senderId }
+
+            val shouldNotify = receiverId != null && !activeParticipants.contains(receiverId)
+
+            if (shouldNotify) {
+                updates["unreadCounts.$receiverId"] = FieldValue.increment(1)
+            }
+
             batch.update(chatRef, updates)
             
             batch.commit().await()
 
             // --- New: Send Push Notification (App-to-App V1) ---
-            try {
-                val chatDoc = chatCollection.document(chatId).get().await()
-                @Suppress("UNCHECKED_CAST")
-                val participants = chatDoc.get("participants") as? List<String>
-                val receiverId = participants?.find { it != message.senderId }
-
-                if (receiverId != null) {
-                    val receiverDoc = FirestoreHelper.getUsersCollection().document(receiverId).get().await()
+            if (shouldNotify) {
+                try {
+                    val receiverDoc = FirestoreHelper.getUsersCollection().document(receiverId!!).get().await()
                     val token = receiverDoc.getString("fcmToken")
                     
                     val senderDoc = FirestoreHelper.getUsersCollection().document(message.senderId).get().await()
@@ -167,9 +178,9 @@ class ChatRepositoryImpl : ChatRepository {
                             fcmApi.sendNotification(projectId, bearerToken, payload)
                         }
                     }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
 
             Resource.Success(Unit)
@@ -214,9 +225,11 @@ class ChatRepositoryImpl : ChatRepository {
                 val chatDoc = chatCollection.document(chatId).get().await()
                 @Suppress("UNCHECKED_CAST")
                 val participants = chatDoc.get("participants") as? List<String>
+                @Suppress("UNCHECKED_CAST")
+                val activeParticipants = chatDoc.get("activeParticipants") as? List<String> ?: emptyList()
                 val receiverId = participants?.find { it != currentUserId }
 
-                if (receiverId != null && currentUserId != null) {
+                if (receiverId != null && currentUserId != null && !activeParticipants.contains(receiverId)) {
                     val receiverDoc = FirestoreHelper.getUsersCollection().document(receiverId).get().await()
                     val token = receiverDoc.getString("fcmToken")
                     
@@ -252,8 +265,26 @@ class ChatRepositoryImpl : ChatRepository {
     }
 
     override suspend fun markAsRead(chatId: String, userId: String): Resource<Unit> {
-        // Implementation for marking messages as read (version 1)
-        return Resource.Success(Unit)
+        return try {
+            chatCollection.document(chatId).update("unreadCounts.$userId", 0).await()
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Resource.Failure(e)
+        }
+    }
+
+    override suspend fun setChatActiveStatus(chatId: String, userId: String, isActive: Boolean): Resource<Unit> {
+        return try {
+            val update = if (isActive) {
+                FieldValue.arrayUnion(userId)
+            } else {
+                FieldValue.arrayRemove(userId)
+            }
+            chatCollection.document(chatId).update("activeParticipants", update).await()
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Resource.Failure(e)
+        }
     }
 
     override suspend fun markChatsAsProductSold(productId: String): Resource<Unit> {
@@ -273,6 +304,45 @@ class ChatRepositoryImpl : ChatRepository {
             }
             Resource.Success(Unit)
         } catch (e: Exception) {
+            Resource.Failure(e)
+        }
+    }
+
+    override suspend fun performMaintenanceCleanup(userId: String): Resource<Unit> {
+        return try {
+            val now = System.currentTimeMillis()
+            val sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000L
+            val cutoffDate = Timestamp(java.util.Date(now - sevenDaysInMillis))
+
+            // 1. Find expired chats where current user is a participant
+            val expiredQuery = chatCollection
+                .whereArrayContains("participants", userId)
+                .whereLessThanOrEqualTo("lastTimestamp", cutoffDate)
+                .get()
+                .await()
+
+            if (expiredQuery.isEmpty) return Resource.Success(Unit)
+
+            val batch = db.batch()
+
+            for (chatDoc in expiredQuery.documents) {
+                val chatId = chatDoc.id
+                
+                // 2. Fetch all messages in subcollection to delete them (Recursion not supported in client SDK)
+                val messagesQuery = FirestoreHelper.getMessagesCollection(chatId).get().await()
+                for (msgDoc in messagesQuery.documents) {
+                    batch.delete(msgDoc.reference)
+                }
+
+                // 3. Delete the parent chat document
+                batch.delete(chatDoc.reference)
+            }
+
+            batch.commit().await()
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            // Log error but don't crash the app for maintenance failure
+            e.printStackTrace()
             Resource.Failure(e)
         }
     }

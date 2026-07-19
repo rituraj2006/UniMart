@@ -12,6 +12,7 @@ import com.google.firebase.messaging.RemoteMessage
 import com.unimart.app.MainActivity
 import com.unimart.app.R
 import com.unimart.app.repositories.AuthRepository
+import com.unimart.app.utils.ChatSessionManager
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
@@ -29,6 +30,11 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val type = remoteMessage.data["type"]
         val chatId = remoteMessage.data["chatId"]
         val productId = remoteMessage.data["productId"]
+
+        // Fix: Don't show system notification if the user is already in this specific chat
+        if (chatId != null && chatId == ChatSessionManager.activeChatId) {
+            return
+        }
 
         if (title != null && body != null) {
             showNotification(title, body, type, chatId, productId)

@@ -42,6 +42,9 @@ class MessagesFragment : Fragment() {
         
         setupRecyclerView()
         observeConversations()
+        
+        // Automated Maintenance: Delete chats with no activity for 7 days
+        viewModel.performCleanup(currentUserId)
     }
 
     private fun setupRecyclerView() {

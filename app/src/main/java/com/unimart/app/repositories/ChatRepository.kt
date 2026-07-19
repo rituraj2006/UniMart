@@ -28,5 +28,7 @@ interface ChatRepository {
     suspend fun sendMessage(chatId: String, message: Message): Resource<Unit>
     suspend fun updatePhoneSharing(chatId: String, status: PhoneSharingStatus): Resource<Unit>
     suspend fun markAsRead(chatId: String, userId: String): Resource<Unit>
+    suspend fun setChatActiveStatus(chatId: String, userId: String, isActive: Boolean): Resource<Unit>
     suspend fun markChatsAsProductSold(productId: String): Resource<Unit>
+    suspend fun performMaintenanceCleanup(userId: String): Resource<Unit>
 }

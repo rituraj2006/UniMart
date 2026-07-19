@@ -62,6 +62,12 @@ class ChatViewModel : ViewModel() {
         }
     }
 
+    fun setChatActive(chatId: String, userId: String, isActive: Boolean) {
+        viewModelScope.launch {
+            repository.setChatActiveStatus(chatId, userId, isActive)
+        }
+    }
+
     fun updatePhoneSharing(chatId: String, status: com.unimart.app.constants.PhoneSharingStatus) {
         viewModelScope.launch {
             repository.updatePhoneSharing(chatId, status)

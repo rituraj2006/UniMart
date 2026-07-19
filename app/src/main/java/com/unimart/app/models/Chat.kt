@@ -26,5 +26,9 @@ data class Chat(
     val title: String = "",
     val price: Double = 0.0,
     val thumbnail: String = "",
-    val productStatus: String = "AVAILABLE" // Using String to match existing ProductStatus.kt if needed
+    val productStatus: String = "AVAILABLE",
+
+    // Unread & Active Status
+    val unreadCounts: Map<String, Int> = emptyMap(), // uid -> count
+    val activeParticipants: List<String> = emptyList() // uids currently viewing this chat
 )

@@ -1,6 +1,7 @@
 package com.unimart.app.adapters
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -45,6 +46,19 @@ class MessagesAdapter(
             
             binding.tvLastMessage.text = chat.lastMessagePreview.ifEmpty { "Start a conversation" }
             binding.tvTime.text = formatTimestamp(chat.lastTimestamp)
+
+            // Unread Badge Logic
+            val unreadCount = chat.unreadCounts[currentUserId] ?: 0
+            if (unreadCount > 0) {
+                binding.tvUnreadBadge.text = if (unreadCount > 99) "99+" else unreadCount.toString()
+                binding.tvUnreadBadge.visibility = View.VISIBLE
+                binding.tvLastMessage.setTextColor(binding.root.context.getColor(R.color.unimart_primary))
+                binding.tvLastMessage.setTypeface(null, android.graphics.Typeface.BOLD)
+            } else {
+                binding.tvUnreadBadge.visibility = View.GONE
+                binding.tvLastMessage.setTextColor(binding.root.context.getColor(R.color.unimart_text_secondary))
+                binding.tvLastMessage.setTypeface(null, android.graphics.Typeface.NORMAL)
+            }
 
             Glide.with(binding.root.context)
                 .load(chat.thumbnail)

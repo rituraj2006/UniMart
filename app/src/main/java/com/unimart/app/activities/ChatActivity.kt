@@ -22,6 +22,7 @@ import com.unimart.app.constants.PhoneSharingStatus
 import com.unimart.app.databinding.ActivityChatBinding
 import com.unimart.app.models.Message
 import com.unimart.app.network.CloudinaryRepository
+import com.unimart.app.utils.ChatSessionManager
 import com.unimart.app.utils.Resource
 import com.unimart.app.viewmodels.ChatViewModel
 
@@ -71,7 +72,21 @@ class ChatActivity : AppCompatActivity() {
         observeSendStatus()
         observeChatStatus()
         
+        viewModel.setChatActive(chatId!!, currentUserId, true)
         viewModel.markAsRead(chatId!!, currentUserId)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        ChatSessionManager.activeChatId = chatId
+        chatId?.let { viewModel.setChatActive(it, currentUserId, true) }
+        chatId?.let { viewModel.markAsRead(it, currentUserId) }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        ChatSessionManager.activeChatId = null
+        chatId?.let { viewModel.setChatActive(it, currentUserId, false) }
     }
 
     private fun handleWindowInsets() {

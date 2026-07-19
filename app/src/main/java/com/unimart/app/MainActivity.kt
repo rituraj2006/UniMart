@@ -12,6 +12,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import com.google.firebase.messaging.FirebaseMessaging
 import com.unimart.app.activities.ChatActivity
 import com.unimart.app.activities.ContactRequestsActivity
@@ -43,6 +44,7 @@ class MainActivity : AppCompatActivity() {
 
         askNotificationPermission()
         updateFcmToken()
+        setupBottomNavBadges()
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.bottomNavigation) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -135,6 +137,24 @@ class MainActivity : AppCompatActivity() {
             if (task.isSuccessful) {
                 val token = task.result
                 AuthRepository().updateFcmToken(token)
+            }
+        }
+    }
+
+    private fun setupBottomNavBadges() {
+        val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val messagesViewModel = ViewModelProvider(this)[com.unimart.app.viewmodels.MessagesViewModel::class.java]
+        
+        messagesViewModel.getTotalUnreadCount(uid).observe(this) { count ->
+            val badge = binding.bottomNavigation.getOrCreateBadge(R.id.nav_messages)
+            if (count > 0) {
+                badge.isVisible = true
+                badge.number = count
+                badge.backgroundColor = ContextCompat.getColor(this, R.color.unimart_primary)
+                badge.badgeTextColor = ContextCompat.getColor(this, R.color.white)
+            } else {
+                badge.isVisible = false
+                binding.bottomNavigation.removeBadge(R.id.nav_messages)
             }
         }
     }
