@@ -12,10 +12,7 @@ import com.unimart.app.models.Message
 import com.unimart.app.utils.FirestoreHelper
 import com.unimart.app.utils.Resource
 import com.unimart.app.network.FcmApi
-import com.unimart.app.network.FcmPayloadV1
-import com.unimart.app.network.MessageData
-import com.unimart.app.network.NotificationData
-import com.unimart.app.utils.AccessTokenProvider
+import com.unimart.app.network.ProxyPayload
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import kotlinx.coroutines.Dispatchers
@@ -30,11 +27,10 @@ class ChatRepositoryImpl : ChatRepository {
     private val db = FirebaseFirestore.getInstance()
     private val chatCollection = FirestoreHelper.getChatsCollection()
     private val requestCollection = FirestoreHelper.getChatRequestsCollection()
-    private val projectId = "unimart-6726a"
 
     private val fcmApi: FcmApi by lazy {
         Retrofit.Builder()
-            .baseUrl("https://fcm.googleapis.com/")
+            .baseUrl("https://unimart-proxy.onrender.com/")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(FcmApi::class.java)
@@ -42,20 +38,17 @@ class ChatRepositoryImpl : ChatRepository {
 
     override suspend fun acceptChatRequest(request: ChatRequest, chatMetadata: Chat): Resource<String> {
         return try {
-            // Final Rule: chatId must be productId_buyerId
             val chatId = "${request.productId}_${request.buyerId}"
             
             db.runTransaction { transaction ->
                 val requestRef = requestCollection.document(request.requestId)
                 val chatRef = chatCollection.document(chatId)
                 
-                // 1. Verify Request exists before promoting (Read-before-write)
                 val requestSnapshot = transaction.get(requestRef)
                 if (!requestSnapshot.exists()) {
                     throw Exception("Chat request no longer exists.")
                 }
                 
-                // 2. Create Chat and Delete Request atomically
                 transaction.set(chatRef, chatMetadata.copy(chatId = chatId))
                 transaction.delete(requestRef)
                 
@@ -126,7 +119,6 @@ class ChatRepositoryImpl : ChatRepository {
             
             batch.set(messageRef, message.copy(messageId = messageRef.id))
             
-            // Update Chat metadata
             val previewText = if (message.type == MessageType.IMAGE) "📷 Image" else message.content
             val updates = mutableMapOf<String, Any>(
                 "lastMessagePreview" to previewText,
@@ -134,7 +126,6 @@ class ChatRepositoryImpl : ChatRepository {
                 "lastTimestamp" to message.timestamp
             )
 
-            // Logic: Increment unread count for the receiver ONLY if they are NOT active in the chat
             val chatDoc = chatRef.get().await()
             @Suppress("UNCHECKED_CAST")
             val activeParticipants = chatDoc.get("activeParticipants") as? List<String> ?: emptyList()
@@ -149,34 +140,23 @@ class ChatRepositoryImpl : ChatRepository {
             }
 
             batch.update(chatRef, updates)
-            
             batch.commit().await()
 
-            // --- New: Send Push Notification (App-to-App V1) ---
-            if (shouldNotify) {
+            if (shouldNotify && receiverId != null) {
                 try {
-                    val receiverDoc = FirestoreHelper.getUsersCollection().document(receiverId!!).get().await()
+                    val receiverDoc = FirestoreHelper.getUsersCollection().document(receiverId).get().await()
                     val token = receiverDoc.getString("fcmToken")
-                    
                     val senderDoc = FirestoreHelper.getUsersCollection().document(message.senderId).get().await()
                     val senderName = senderDoc.getString("name") ?: "UniMart"
 
                     if (!token.isNullOrEmpty()) {
-                        // Use context from app to access assets
-                        val context = com.google.firebase.FirebaseApp.getInstance().applicationContext
-                        val bearerToken = AccessTokenProvider.getAccessToken(context)
-                        
-                        if (bearerToken != null) {
-                            val bodyText = if (message.type == MessageType.IMAGE) "📷 Image" else message.content
-                            val payload = FcmPayloadV1(
-                                message = MessageData(
-                                    token = token,
-                                    notification = NotificationData(senderName, bodyText),
-                                    data = mapOf("type" to "MESSAGE", "chatId" to chatId)
-                                )
-                            )
-                            fcmApi.sendNotification(projectId, bearerToken, payload)
-                        }
+                        val payload = ProxyPayload(
+                            token = token,
+                            title = senderName,
+                            body = previewText,
+                            data = mapOf("type" to "MESSAGE", "chatId" to chatId)
+                        )
+                        fcmApi.sendNotification(payload)
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -195,10 +175,8 @@ class ChatRepositoryImpl : ChatRepository {
             val chatRef = chatCollection.document(chatId)
             val messageRef = FirestoreHelper.getMessagesCollection(chatId).document()
             
-            // 1. Update Status
             batch.update(chatRef, "phoneSharingStatus", status)
             
-            // 2. Insert System Message
             val systemText = when(status) {
                 PhoneSharingStatus.PENDING -> "WhatsApp contact requested."
                 PhoneSharingStatus.APPROVED -> "Seller approved WhatsApp contact."
@@ -219,39 +197,29 @@ class ChatRepositoryImpl : ChatRepository {
             
             batch.commit().await()
 
-            // --- New: Send Push Notification (App-to-App V1) ---
             try {
                 val currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
                 val chatDoc = chatCollection.document(chatId).get().await()
                 @Suppress("UNCHECKED_CAST")
-                val participants = chatDoc.get("participants") as? List<String>
+                val participants = chatDoc.get("participants") as? List<String> ?: emptyList()
                 @Suppress("UNCHECKED_CAST")
                 val activeParticipants = chatDoc.get("activeParticipants") as? List<String> ?: emptyList()
-                val receiverId = participants?.find { it != currentUserId }
+                val receiverId = participants.find { it != currentUserId }
 
                 if (receiverId != null && currentUserId != null && !activeParticipants.contains(receiverId)) {
                     val receiverDoc = FirestoreHelper.getUsersCollection().document(receiverId).get().await()
                     val token = receiverDoc.getString("fcmToken")
-                    
                     val senderDoc = FirestoreHelper.getUsersCollection().document(currentUserId).get().await()
                     val senderName = senderDoc.getString("name") ?: "UniMart"
 
                     if (!token.isNullOrEmpty()) {
-                        // Use context from app to access assets
-                        val context = com.google.firebase.FirebaseApp.getInstance().applicationContext
-                        val bearerToken = AccessTokenProvider.getAccessToken(context)
-                        
-                        if (bearerToken != null) {
-                            val bodyText = systemText
-                            val payload = FcmPayloadV1(
-                                message = MessageData(
-                                    token = token,
-                                    notification = NotificationData(senderName, bodyText),
-                                    data = mapOf("type" to "MESSAGE", "chatId" to chatId)
-                                )
-                            )
-                            fcmApi.sendNotification(projectId, bearerToken, payload)
-                        }
+                        val payload = ProxyPayload(
+                            token = token,
+                            title = senderName,
+                            body = systemText,
+                            data = mapOf("type" to "MESSAGE", "chatId" to chatId)
+                        )
+                        fcmApi.sendNotification(payload)
                     }
                 }
             } catch (e: Exception) {
@@ -311,10 +279,8 @@ class ChatRepositoryImpl : ChatRepository {
     override suspend fun performMaintenanceCleanup(userId: String): Resource<Unit> {
         return try {
             val now = System.currentTimeMillis()
-            val sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000L
-            val cutoffDate = Timestamp(java.util.Date(now - sevenDaysInMillis))
+            val cutoffDate = Timestamp(java.util.Date(now - 7 * 24 * 60 * 60 * 1000L))
 
-            // 1. Find expired chats where current user is a participant
             val expiredQuery = chatCollection
                 .whereArrayContains("participants", userId)
                 .whereLessThanOrEqualTo("lastTimestamp", cutoffDate)
@@ -324,24 +290,18 @@ class ChatRepositoryImpl : ChatRepository {
             if (expiredQuery.isEmpty) return Resource.Success(Unit)
 
             val batch = db.batch()
-
             for (chatDoc in expiredQuery.documents) {
                 val chatId = chatDoc.id
-                
-                // 2. Fetch all messages in subcollection to delete them (Recursion not supported in client SDK)
                 val messagesQuery = FirestoreHelper.getMessagesCollection(chatId).get().await()
                 for (msgDoc in messagesQuery.documents) {
                     batch.delete(msgDoc.reference)
                 }
-
-                // 3. Delete the parent chat document
                 batch.delete(chatDoc.reference)
             }
 
             batch.commit().await()
             Resource.Success(Unit)
         } catch (e: Exception) {
-            // Log error but don't crash the app for maintenance failure
             e.printStackTrace()
             Resource.Failure(e)
         }
