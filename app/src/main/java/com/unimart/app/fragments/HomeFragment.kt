@@ -44,6 +44,7 @@ class HomeFragment : Fragment() {
     private var wishlistedIds = setOf<String>()
     private lateinit var productAdapter: ProductAdapter
     private lateinit var categoryAdapter: CategoryAdapter
+    private var productsListener: com.google.firebase.firestore.ListenerRegistration? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -103,6 +104,12 @@ class HomeFragment : Fragment() {
         loadCurrentUserProfile()
     }
 
+    override fun onPause() {
+        super.onPause()
+        productsListener?.remove()
+        productsListener = null
+    }
+
     private fun observeViewModel() {
         viewModel.filteredProducts.observe(viewLifecycleOwner) { filteredList ->
             if (::productAdapter.isInitialized) {
@@ -128,7 +135,10 @@ class HomeFragment : Fragment() {
         binding.etSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                viewModel.searchProducts(s?.toString() ?: "")
+                val query = s?.toString() ?: ""
+                viewModel.searchProducts(query)
+                // If user starts searching, we may need to reload without the 20-item limit
+                loadProducts()
             }
             override fun afterTextChanged(s: Editable?) {}
         })
@@ -160,6 +170,8 @@ class HomeFragment : Fragment() {
         )
         categoryAdapter = CategoryAdapter(categoryList) { category ->
             viewModel.selectCategory(category.name)
+            // Reload without the 20-item limit when a category is selected
+            loadProducts()
         }
         binding.rvCategories.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         binding.rvCategories.adapter = categoryAdapter
@@ -190,38 +202,46 @@ class HomeFragment : Fragment() {
     }
 
     private fun loadProducts() {
+        val isFilterActive = viewModel.isFilterActive()
+        productsListener?.remove()
         viewModel.setLoading(true)
+        
         val db = FirebaseFirestore.getInstance()
-        db.collection("Products")
+        
+        // Use a query that only relies on the default 'createdAt' index
+        var query = db.collection("Products")
             .orderBy("createdAt", Query.Direction.DESCENDING)
-            .get()
-            .addOnSuccessListener { querySnapshot ->
-                viewModel.setLoading(false)
-                if (_binding == null) return@addOnSuccessListener
-                
-                val newProducts = mutableListOf<Product>()
-                for (doc in querySnapshot) {
-                    try {
-                        val product = doc.toObject(Product::class.java)
-                        if (product.status == "AVAILABLE") {
-                            newProducts.add(product)
-                        }
-                    } catch (e: Exception) { e.printStackTrace() }
-                }
-                
-                productList.clear()
-                productList.addAll(newProducts)
-                
-                // Initialize the ViewModel with the loaded products for in-memory searching
-                viewModel.setAllProducts(newProducts)
-                
-                updateEmptyState(productList.isEmpty())
-            }
-            .addOnFailureListener { e ->
-                viewModel.setLoading(false)
-                if (_binding == null) return@addOnFailureListener
+
+        // Apply a reasonable buffer limit to ensure we find enough AVAILABLE items 
+        // without requiring a composite index.
+        if (!isFilterActive) {
+            query = query.limit(50) 
+        }
+
+        productsListener = query.addSnapshotListener { querySnapshot, e ->
+            viewModel.setLoading(false)
+            if (_binding == null) return@addSnapshotListener
+            
+            if (e != null) {
                 context?.let { Toast.makeText(it, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show() }
+                return@addSnapshotListener
             }
+
+            // Filter for AVAILABLE status locally in Kotlin to avoid Index requirements
+            var newProducts = querySnapshot?.toObjects(Product::class.java)
+                ?.filter { it.status == "AVAILABLE" } ?: emptyList()
+            
+            // Apply the 20-item limit for the Home screen
+            if (!isFilterActive) {
+                newProducts = newProducts.take(20)
+            }
+            
+            productList.clear()
+            productList.addAll(newProducts)
+            
+            viewModel.setAllProducts(newProducts)
+            updateEmptyState(productList.isEmpty())
+        }
     }
 
     private fun loadCurrentUserProfile() {

@@ -18,6 +18,11 @@ class HomeViewModel : ViewModel() {
     private var selectedCategory: String? = null
 
     /**
+     * Returns true if any filter (search or category) is currently active.
+     */
+    fun isFilterActive(): Boolean = currentSearchQuery.isNotEmpty() || selectedCategory != null
+
+    /**
      * Updates loading state
      */
     fun setLoading(isLoading: Boolean) {
