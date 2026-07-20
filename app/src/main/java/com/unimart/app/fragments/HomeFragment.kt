@@ -67,7 +67,6 @@ class HomeFragment : Fragment() {
 
         setupCategories()
         setupRecyclerView()
-        setupClickListeners()
         setupSearch()
         setupSwipeRefresh()
         loadWishlist()
@@ -248,12 +247,6 @@ class HomeFragment : Fragment() {
         } else {
             binding.llEmptyState.visibility = View.GONE
             binding.rvProducts.visibility = View.VISIBLE
-        }
-    }
-
-    private fun setupClickListeners() {
-        binding.fabSell.setOnClickListener {
-            startActivity(Intent(context, SellProductActivity::class.java))
         }
     }
 
