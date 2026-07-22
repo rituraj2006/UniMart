@@ -70,6 +70,10 @@
         <activity
             android:name=".activities.FullScreenImageActivity"
             android:exported="false" />
+        <activity
+            android:name=".activities.PublicProfileActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
 
         <service
             android:name=".firebase.MyFirebaseMessagingService"

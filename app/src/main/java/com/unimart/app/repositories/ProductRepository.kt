@@ -111,6 +111,14 @@ class ProductRepository {
         onFailure: (Exception) -> Unit
     ) {
         val uid = auth.currentUser?.uid ?: return onFailure(Exception("User not logged in"))
+        getSellingCountById(uid, onSuccess, onFailure)
+    }
+
+    fun getSellingCountById(
+        uid: String,
+        onSuccess: (Int) -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
         productsCollection
             .whereEqualTo("sellerId", uid)
             .whereEqualTo("status", ProductStatus.AVAILABLE)

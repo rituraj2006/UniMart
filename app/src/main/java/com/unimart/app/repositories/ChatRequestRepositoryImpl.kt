@@ -29,15 +29,24 @@ class ChatRequestRepositoryImpl : ChatRequestRepository {
 
     override suspend fun sendChatRequest(request: ChatRequest): Resource<Unit> {
         return try {
+            // Rule: One Buyer + One Product = One Request/Conversation.
             val docId = "${request.productId}_${request.buyerId}"
-            val docRef = requestCollection.document(docId)
             
-            val existing = docRef.get().await()
-            if (existing.exists()) {
+            // 1. Check if a pending request already exists
+            val existingRequest = requestCollection.document(docId).get().await()
+            if (existingRequest.exists()) {
                 return Resource.Success(Unit) 
             }
+
+            // 2. Check if an active chat already exists for this pair
+            val chatsCollection = FirestoreHelper.getChatsCollection()
+            val existingChat = chatsCollection.document(docId).get().await()
+            if (existingChat.exists()) {
+                return Resource.Success(Unit)
+            }
             
-            docRef.set(request.copy(requestId = docId)).await()
+            // No request or chat exists, proceed to create request
+            requestCollection.document(docId).set(request.copy(requestId = docId)).await()
 
             // --- New: Notify Seller ---
             try {

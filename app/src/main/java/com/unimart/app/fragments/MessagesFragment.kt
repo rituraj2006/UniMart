@@ -51,7 +51,9 @@ class MessagesFragment : Fragment() {
         adapter = MessagesAdapter(currentUserId) { chat ->
             val intent = android.content.Intent(requireContext(), com.unimart.app.activities.ChatActivity::class.java).apply {
                 putExtra("CHAT_ID", chat.chatId)
+                putExtra("OTHER_USER_ID", if (currentUserId == chat.buyerId) chat.sellerId else chat.buyerId)
                 putExtra("OTHER_USER_NAME", if (currentUserId == chat.buyerId) chat.sellerName else chat.buyerName)
+                putExtra("SELLER_ID", chat.sellerId)
                 putExtra("PRODUCT_TITLE", chat.title)
                 putExtra("PRODUCT_THUMBNAIL", chat.thumbnail)
             }

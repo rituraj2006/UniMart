@@ -11,6 +11,10 @@
         <item name="colorOnSurfaceVariant">@color/unimart_text_secondary</item>
         <item name="colorError">@color/unimart_error</item>
 
+        <!-- Primary Text Colors (Fixes Popup Inconsistencies) -->
+        <item name="android:textColorPrimary">@color/unimart_text_primary</item>
+        <item name="android:textColorSecondary">@color/unimart_text_secondary</item>
+
         <!-- Global Component Styles -->
         <item name="materialCardViewStyle">@style/Widget.UniMart.Card</item>
         <item name="materialButtonStyle">@style/Widget.UniMart.Button</item>
@@ -19,6 +23,10 @@
         <item name="bottomNavigationStyle">@style/Widget.UniMart.BottomNav</item>
         <item name="extendedFloatingActionButtonStyle">@style/Widget.UniMart.FAB</item>
         <item name="toolbarStyle">@style/Widget.UniMart.Toolbar</item>
+
+        <!-- Popup Menu & Dropdown Styles (Centralized Fix) -->
+        <item name="actionBarPopupTheme">@style/ThemeOverlay.UniMart.Popup</item>
+        <item name="popupTheme">@style/ThemeOverlay.UniMart.Popup</item>
 
         <!-- System Bars -->
         <item name="android:statusBarColor">@color/unimart_background</item>

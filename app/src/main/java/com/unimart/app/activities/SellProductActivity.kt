@@ -141,11 +141,11 @@ class SellProductActivity : AppCompatActivity() {
             "Books", "Electronics", "Furniture", "Cycles",
             "Phones", "Hostel Essentials", "Notes", "Accessories", "Others"
         )
-        val categoryAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, categories)
+        val categoryAdapter = ArrayAdapter(this, R.layout.dropdown_item, categories)
         actCategory.setAdapter(categoryAdapter)
 
         val conditions = arrayOf("New", "Like New", "Good", "Fair")
-        val conditionAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, conditions)
+        val conditionAdapter = ArrayAdapter(this, R.layout.dropdown_item, conditions)
         actCondition.setAdapter(conditionAdapter)
     }
 

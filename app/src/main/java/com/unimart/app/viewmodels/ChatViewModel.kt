@@ -16,9 +16,33 @@ import kotlinx.coroutines.launch
 class ChatViewModel : ViewModel() {
 
     private val repository = ChatRepositoryImpl()
+    private val userRepository = com.unimart.app.repositories.UserRepository()
 
     private val _sendMessageStatus = MutableLiveData<Resource<Unit>>()
     val sendMessageStatus: LiveData<Resource<Unit>> = _sendMessageStatus
+
+    private val _isBlocked = MutableLiveData<Boolean>()
+    val isBlocked: LiveData<Boolean> = _isBlocked
+
+    fun checkBlockStatus(currentUserId: String, targetUserId: String) {
+        viewModelScope.launch {
+            _isBlocked.value = userRepository.isUserBlocked(currentUserId, targetUserId)
+        }
+    }
+
+    fun blockUser(currentUserId: String, targetUserId: String) {
+        viewModelScope.launch {
+            val result = userRepository.blockUser(currentUserId, targetUserId)
+            if (result is Resource.Success) _isBlocked.value = true
+        }
+    }
+
+    fun unblockUser(currentUserId: String, targetUserId: String) {
+        viewModelScope.launch {
+            val result = userRepository.unblockUser(currentUserId, targetUserId)
+            if (result is Resource.Success) _isBlocked.value = false
+        }
+    }
 
     fun getMessages(chatId: String): LiveData<Resource<List<Message>>> {
         return repository.getChatMessages(chatId).asLiveData()

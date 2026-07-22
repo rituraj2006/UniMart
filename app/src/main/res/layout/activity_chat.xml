@@ -78,9 +78,36 @@
 
             </LinearLayout>
 
+            <ImageView
+                android:id="@+id/ivMenu"
+                style="?android:attr/actionOverflowButtonStyle"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="More options"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:tint="@color/white" />
+
         </androidx.constraintlayout.widget.ConstraintLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- Blocked Banner -->
+    <TextView
+        android:id="@+id/tvBlockedBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#22EF4444"
+        android:gravity="center"
+        android:padding="12dp"
+        android:text="You blocked this user. Unblock them to continue chatting."
+        android:textColor="@color/unimart_error"
+        android:textSize="13sp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/appBar"
+        tools:visibility="visible" />
 
     <!-- WhatsApp Sharing Banner -->
     <com.google.android.material.card.MaterialCardView

@@ -119,4 +119,12 @@
 
     <style name="Widget.UniMart.BottomNavigationView" parent="Widget.UniMart.BottomNav" />
 
+    <!-- Centralized Popup Overlay (Fixes Background & Text Color) -->
+    <style name="ThemeOverlay.UniMart.Popup" parent="ThemeOverlay.Material3.AutoCompleteTextView">
+        <item name="colorSurface">@color/unimart_surface_elevated</item>
+        <item name="colorOnSurface">@color/white</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textColorPrimary">@color/white</item>
+    </style>
+
 </resources>

@@ -37,6 +37,7 @@ class ChatActivity : AppCompatActivity() {
     
     private var chatId: String? = null
     private var otherUserName: String? = null
+    private var otherUserId: String? = null
     private var productTitle: String? = null
     private var productThumbnail: String? = null
 
@@ -57,6 +58,7 @@ class ChatActivity : AppCompatActivity() {
 
         chatId = intent.getStringExtra("CHAT_ID")
         otherUserName = intent.getStringExtra("OTHER_USER_NAME")
+        otherUserId = intent.getStringExtra("OTHER_USER_ID")
         productTitle = intent.getStringExtra("PRODUCT_TITLE")
         productThumbnail = intent.getStringExtra("PRODUCT_THUMBNAIL")
 
@@ -71,9 +73,52 @@ class ChatActivity : AppCompatActivity() {
         observeMessages()
         observeSendStatus()
         observeChatStatus()
+        observeBlockStatus()
         
+        otherUserId?.let { viewModel.checkBlockStatus(currentUserId, it) }
         viewModel.setChatActive(chatId!!, currentUserId, true)
         viewModel.markAsRead(chatId!!, currentUserId)
+    }
+
+    private fun observeBlockStatus() {
+        viewModel.isBlocked.observe(this) { blocked ->
+            if (blocked) {
+                binding.tvBlockedBanner.visibility = View.VISIBLE
+                binding.inputArea.visibility = View.GONE
+                binding.cardWhatsAppBanner.visibility = View.GONE
+                binding.tvBlockedBanner.setOnClickListener {
+                    showUnblockConfirmation()
+                }
+            } else {
+                binding.tvBlockedBanner.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun showBlockConfirmation() {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("Block User?")
+            .setMessage("You will no longer be able to interact with this user. They won't be able to contact you or interact with your listings. You can unblock them later.")
+            .setPositiveButton("Block") { _, _ ->
+                otherUserId?.let { viewModel.blockUser(currentUserId, it) }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showUnblockConfirmation() {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("Unblock User?")
+            .setMessage("Unblock this user to continue chatting and interacting with their listings?")
+            .setPositiveButton("Unblock") { _, _ ->
+                unblockUser()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun unblockUser() {
+        otherUserId?.let { viewModel.unblockUser(currentUserId, it) }
     }
 
     override fun onResume() {
@@ -120,6 +165,31 @@ class ChatActivity : AppCompatActivity() {
             .into(binding.ivProductThumbnail)
 
         binding.ivBack.setOnClickListener { finish() }
+
+        binding.ivMenu.setOnClickListener { v ->
+            val popup = androidx.appcompat.widget.PopupMenu(this, v)
+            popup.menuInflater.inflate(R.menu.chat_menu, popup.menu)
+            
+            val blockItem = popup.menu.findItem(R.id.action_block_user)
+            blockItem.title = if (viewModel.isBlocked.value == true) "Unblock User" else "Block User"
+
+            popup.setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    R.id.action_view_profile -> {
+                        val intent = Intent(this, com.unimart.app.activities.PublicProfileActivity::class.java)
+                        intent.putExtra("USER_ID", otherUserId)
+                        startActivity(intent)
+                        true
+                    }
+                    R.id.action_block_user -> {
+                        if (viewModel.isBlocked.value == true) unblockUser() else showBlockConfirmation()
+                        true
+                    }
+                    else -> false
+                }
+            }
+            popup.show()
+        }
 
         binding.ivAttachImage.setOnClickListener {
             pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))

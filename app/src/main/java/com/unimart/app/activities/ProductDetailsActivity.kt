@@ -19,7 +19,9 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
+import kotlinx.coroutines.launch
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.google.android.material.snackbar.Snackbar
@@ -29,12 +31,15 @@ import com.google.firebase.auth.FirebaseAuth
 import com.unimart.app.R
 import com.unimart.app.adapters.ProductImagesAdapter
 import com.unimart.app.constants.ProductStatus
+import com.unimart.app.constants.ChatRequestStatus
 import com.unimart.app.databinding.ActivityProductDetailsBinding
 import com.unimart.app.models.Product
 import com.unimart.app.models.User
+import com.unimart.app.models.Chat
 import com.unimart.app.repositories.ProductRepository
 import com.unimart.app.repositories.WishlistRepository
 import com.unimart.app.utils.Resource
+import kotlinx.coroutines.tasks.await
 import java.util.Calendar
 import java.util.Locale
 
@@ -153,12 +158,24 @@ class ProductDetailsActivity : AppCompatActivity() {
         viewModel.setLoading(true)
         productRepository.getProductById(productId,
             onSuccess = { product ->
-                viewModel.setLoading(false)
-                if (isFinishing) return@getProductById
-                currentProduct = product
-                populateUI(product)
-                checkChatRequestStatus()
-                invalidateOptionsMenu()
+                // Check if user is blocked before populating UI
+                val currentUser = FirebaseAuth.getInstance().currentUser?.uid
+                if (currentUser != null) {
+                    val userRepo = com.unimart.app.repositories.UserRepository()
+                    lifecycleScope.launch {
+                        if (userRepo.isUserBlocked(currentUser, product.sellerId)) {
+                            viewModel.setLoading(false)
+                            showUnavailableState()
+                        } else {
+                            viewModel.setLoading(false)
+                            if (isFinishing) return@launch
+                            currentProduct = product
+                            populateUI(product)
+                            checkChatRequestStatus()
+                            invalidateOptionsMenu()
+                        }
+                    }
+                }
             },
             onFailure = {
                 viewModel.setLoading(false)
@@ -166,6 +183,17 @@ class ProductDetailsActivity : AppCompatActivity() {
                 Toast.makeText(this, "Failed to load product", Toast.LENGTH_SHORT).show()
             },
         )
+    }
+
+    private fun showUnavailableState() {
+        binding.nestedScrollView.visibility = View.GONE
+        binding.bottomActionLayout.visibility = View.GONE
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("Listing Unavailable")
+            .setMessage("This listing is no longer available for interaction.")
+            .setPositiveButton("Go Back") { _, _ -> finish() }
+            .setCancelable(false)
+            .show()
     }
 
     private fun observeChatRequestViewModel() {
@@ -204,10 +232,64 @@ class ProductDetailsActivity : AppCompatActivity() {
             return
         }
 
-        // Logic to check if request productId_buyerId exists
-        // This will be expanded when checkExistingRequest is fully implemented
-        binding.btnContactSeller.text = "Request Chat"
-        binding.btnContactSeller.setOnClickListener { sendNewChatRequest() }
+        // Logic: Check if productId_buyerId exists in either ChatRequests or Chats
+        val docId = "${product.productId}_${currentUser.uid}"
+        
+        // Disable button while checking
+        binding.btnContactSeller.isEnabled = false
+        binding.btnContactSeller.text = "Checking..."
+
+        lifecycleScope.launch {
+            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            
+            // 1. Check if an active Chat exists
+            val chatDoc = db.collection("Chats").document(docId).get().await()
+            if (chatDoc.exists()) {
+                binding.btnContactSeller.text = "Open Chat"
+                binding.btnContactSeller.isEnabled = true
+                binding.btnContactSeller.setOnClickListener {
+                    val chat = chatDoc.toObject(Chat::class.java)
+                    chat?.let {
+                        val chatIntent = Intent(this@ProductDetailsActivity, com.unimart.app.activities.ChatActivity::class.java).apply {
+                            putExtra("CHAT_ID", it.chatId)
+                            putExtra("OTHER_USER_NAME", it.sellerName) // Since buyer is viewing
+                            putExtra("OTHER_USER_ID", it.sellerId)
+                            putExtra("PRODUCT_TITLE", it.title)
+                            putExtra("PRODUCT_THUMBNAIL", it.thumbnail)
+                        }
+                        startActivity(chatIntent)
+                    }
+                }
+                return@launch
+            }
+
+            // 2. Check if a pending Request exists
+            val requestDoc = db.collection("ChatRequests").document(docId).get().await()
+            if (requestDoc.exists()) {
+                val request = requestDoc.toObject(com.unimart.app.models.ChatRequest::class.java)
+                when (request?.status) {
+                    ChatRequestStatus.PENDING -> {
+                        binding.btnContactSeller.text = "Request Pending"
+                        binding.btnContactSeller.isEnabled = false
+                    }
+                    ChatRequestStatus.REJECTED -> {
+                        binding.btnContactSeller.text = "Request Rejected"
+                        binding.btnContactSeller.isEnabled = false
+                    }
+                    else -> {
+                        // Default fallback
+                        binding.btnContactSeller.text = "Request Pending"
+                        binding.btnContactSeller.isEnabled = false
+                    }
+                }
+                return@launch
+            }
+
+            // 3. No chat or request exists
+            binding.btnContactSeller.text = "Request Chat"
+            binding.btnContactSeller.isEnabled = true
+            binding.btnContactSeller.setOnClickListener { sendNewChatRequest() }
+        }
     }
 
     private fun sendNewChatRequest() {

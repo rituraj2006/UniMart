@@ -20,6 +20,10 @@
         <item name="extendedFloatingActionButtonStyle">@style/Widget.UniMart.FAB</item>
         <item name="toolbarStyle">@style/Widget.UniMart.Toolbar</item>
 
+        <!-- Popup Menu & Dropdown Styles (Centralized Fix) -->
+        <item name="actionBarPopupTheme">@style/ThemeOverlay.UniMart.Popup</item>
+        <item name="popupTheme">@style/ThemeOverlay.UniMart.Popup</item>
+
         <!-- System Bars -->
         <item name="android:statusBarColor">@color/unimart_background</item>
         <item name="android:windowLightStatusBar">false</item>

@@ -72,9 +72,17 @@ class HomeFragment : Fragment() {
         setupSwipeRefresh()
         loadWishlist()
         loadProducts()
+        loadBlockedUsers()
         loadCurrentUserProfile()
         
         observeViewModel()
+    }
+
+    private fun loadBlockedUsers() {
+        val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+        if (uid != null) {
+            viewModel.loadBlockedUsers(uid)
+        }
     }
 
     private fun setupSwipeRefresh() {

@@ -147,6 +147,12 @@ class ChatRepositoryImpl : ChatRepository {
 
             if (shouldNotify && receiverId != null) {
                 try {
+                    // Check if receiver has blocked the sender
+                    val userRepo = com.unimart.app.repositories.UserRepository()
+                    if (userRepo.isUserBlocked(receiverId, message.senderId)) {
+                        return Resource.Success(Unit)
+                    }
+
                     val receiverDoc = FirestoreHelper.getUsersCollection().document(receiverId).get().await()
                     val token = receiverDoc.getString("fcmToken")
                     val senderDoc = FirestoreHelper.getUsersCollection().document(message.senderId).get().await()
